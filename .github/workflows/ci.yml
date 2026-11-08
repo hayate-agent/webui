@@ -1,0 +1,25 @@
+name: dashboard-ci
+on:
+  push:
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci --include=dev --ignore-scripts
+      - run: npm run build
+      - run: npm test
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:browser
+      - name: Registration against real API and trusted TLS target
+        run: |
+          git -c http.userAgent=Hayate-Release-Operator/1.0 clone --depth=1 https://git.vanillacore.net/harness/plugins.git /tmp/backend
+          echo "backend=$(git -C /tmp/backend rev-parse HEAD)"
+          HAYATE_PLUGINS_ROOT=/tmp/backend node test/registration.integration.mjs

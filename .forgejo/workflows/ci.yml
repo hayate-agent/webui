@@ -1,0 +1,31 @@
+name: dashboard-ci
+on:
+  push:
+jobs:
+  check:
+    runs-on: harness-agent-checks
+    timeout-minutes: 15
+    steps:
+      - name: Fetch exact standalone dashboard revision
+        run: |
+          set -eu
+          git init -q .
+          git remote add origin "${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}.git"
+          git fetch -q --depth=1 origin "$GITHUB_SHA"
+          git checkout -q --detach FETCH_HEAD
+      - name: Build dashboard and test API integration
+        run: |
+          set -eu
+          image="hayate-webui-ci-${GITHUB_RUN_ID}"
+          trap 'docker image rm "$image" >/dev/null 2>&1 || true' EXIT
+          printf '%s\n' 'FROM node:24-bookworm-slim' 'RUN apt-get update && apt-get install -y --no-install-recommends git ca-certificates openssl && rm -rf /var/lib/apt/lists/*' 'RUN npx --yes playwright@1.65.0 install-deps chromium' | docker build -q -t "$image" -
+          git archive HEAD | docker run --init --rm -i --user 1000:1000 --cap-drop ALL --security-opt no-new-privileges --memory 2g --cpus 2 -e HOME=/tmp "$image" sh -ec '
+            mkdir /tmp/dashboard; tar -xf - -C /tmp/dashboard; cd /tmp/dashboard
+            npm ci --include=dev --ignore-scripts
+            npm run build
+            npm test
+            npx playwright install chromium
+            npm run test:browser
+            git -c http.userAgent=Hayate-Release-Operator/1.0 clone --depth=1 https://git.vanillacore.net/harness/plugins.git /tmp/backend
+            echo "backend=$(git -C /tmp/backend rev-parse HEAD)"
+            HAYATE_PLUGINS_ROOT=/tmp/backend node test/registration.integration.mjs'

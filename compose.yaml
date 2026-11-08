@@ -1,0 +1,19 @@
+services:
+  dashboard:
+    image: ghcr.io/hayate-agent/webui:stable
+    build: .
+    restart: unless-stopped
+    ports:
+      - '127.0.0.1:3210:3210'
+    environment:
+      HAYATE_DASHBOARD_ORIGIN: https://dashboard.example.org
+      HAYATE_DASHBOARD_HOST: 0.0.0.0
+      HAYATE_DASHBOARD_PORT: '3210'
+      HAYATE_AGENT_URL: https://agent-api.example.org
+      HAYATE_TLS_KEY_FILE: /run/tls/key.pem
+      HAYATE_TLS_CERT_FILE: /run/tls/cert.pem
+    volumes:
+      - ./tls:/run/tls:ro
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
