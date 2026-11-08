@@ -1,0 +1,66 @@
+import { chromium } from 'playwright';
+import assert from 'node:assert/strict';
+import path from 'node:path';
+import { pathToFileURL } from 'node:url';
+import { createServer } from 'node:net';
+import { createDashboard } from '../server/server.mjs';
+
+// Explicit integration dependency, never a production/source import.
+if (!process.env.HAYATE_PLUGINS_ROOT) throw Error('Set HAYATE_PLUGINS_ROOT to the backend Plugins checkout');
+const load = file => import(pathToFileURL(path.join(process.env.HAYATE_PLUGINS_ROOT, file)));
+const { setup } = await load('agent-link/test/fixture.mjs');
+const { WebUIChannel } = await load('dashboard-api/index.mjs');
+const { Workspace } = await load('workspace/service.mjs');
+const { AgentLink } = await load('agent-link/server.mjs');
+const cleanup = []; const t = { after: action => cleanup.push(action) };
+let browser, dashboard, api;
+try {
+  const f = await setup(t);
+  const local = new Workspace({ home: f.centralHome, cwd: f.centralHome, executionContexts: { async bind() {} } }); await local.open(); t.after(() => local.stop());
+  const entries = { workspaces: local, 'agent-hub': f.central };
+  api = new WebUIChannel({ home: f.centralHome, port: 0, services: { get: name => entries[name] ? { version: 1, implementation: entries[name] } : undefined } });
+  await api.start(async () => {});
+  const reserve = createServer(); await new Promise(resolve => reserve.listen(0, '127.0.0.1', resolve)); const port = reserve.address().port; await new Promise(resolve => reserve.close(resolve));
+  const origin = `http://127.0.0.1:${port}`; dashboard = await createDashboard({ origin, upstream: api.url });
+  browser = await chromium.launch({ headless: true }); const page = await browser.newPage(); const errors = []; page.on('pageerror', error => errors.push(error.message));
+  await page.goto(origin); await page.getByRole('button', { name: 'Agents', exact: true }).click();
+  await page.getByRole('button', { name: 'Register an agent', exact: true }).click();
+  assert.equal(await page.getByRole('button', { name: 'Generate a single-use registration code', exact: true }).count(), 0);
+  const issued = await f.target.issueCode('operator', { name: 'Target Hayate', capabilities: ['projects', 'streams', 'messages', 'activity'] });
+  await page.getByLabel('Agent name', { exact: true }).fill('Remote development agent');
+  await page.getByLabel('HTTPS endpoint', { exact: true }).fill(f.origin);
+  await page.getByLabel('Registration code', { exact: true }).fill(issued.code);
+  await page.getByLabel('Optional color (#rrggbb)', { exact: true }).fill('#123456');
+  await page.getByRole('button', { name: 'Connect agent', exact: true }).dblclick();
+  let card = page.getByRole('article', { name: 'Registered agent Remote development agent', exact: true }); await card.waitFor();
+  assert.equal(f.central.list('operator').length, 1); assert.equal(f.server.list().length, 1);
+  assert.doesNotMatch(await page.locator('body').innerText(), new RegExp(issued.code));
+  assert.equal(await page.locator('input[type=password]').count(), 0);
+  await card.getByRole('button', { name: 'Check connection', exact: true }).click();
+  await page.waitForFunction(() => [...document.querySelectorAll('.agent-card p')].some(p => p.textContent.startsWith('connected')));
+  assert.equal(f.central.list('operator')[0].connection.status, 'connected');
+  card = page.getByRole('article', { name: 'Registered agent Remote development agent', exact: true });
+  await card.getByRole('button', { name: 'Edit name and color', exact: true }).click();
+  await page.getByLabel('Agent name', { exact: true }).fill('Renamed agent'); await page.getByRole('button', { name: 'Save', exact: true }).click();
+  card = page.getByRole('article', { name: 'Registered agent Renamed agent', exact: true }); await card.waitFor();
+  assert.equal(f.central.list('operator')[0].name, 'Renamed agent');
+  await page.getByRole('button', { name: 'Register an agent', exact: true }).click();
+  await page.getByLabel('Agent name', { exact: true }).fill('Duplicate'); await page.getByLabel('HTTPS endpoint', { exact: true }).fill(f.origin); await page.getByLabel('Registration code', { exact: true }).fill('must-not-be-consumed');
+  await page.getByRole('button', { name: 'Connect agent', exact: true }).click();
+  await page.getByText('This endpoint is already registered. Manage the existing registration instead.', { exact: true }).waitFor();
+  assert.equal(f.server.list().length, 1);
+  await page.getByRole('button', { name: 'Back to agents', exact: true }).click();
+  await f.server.stop(); page.on('dialog', dialog => dialog.accept());
+  card = page.getByRole('article', { name: 'Registered agent Renamed agent', exact: true }); await card.getByRole('button', { name: 'Remove agent', exact: true }).click();
+  await page.locator('.workspace-error').filter({ hasText: 'Removal was not confirmed. The registration is retained; restore connectivity and retry.' }).waitFor();
+  assert.equal(f.central.list('operator').length, 1);
+  const recovered = new AgentLink({ home: f.targetHome, agent: 'Target Hayate', hub: f.target, workspace: f.workspace, config: f.config }); await recovered.open(); t.after(() => recovered.stop());
+  await card.getByRole('button', { name: 'Remove agent', exact: true }).click();
+  await page.getByText('No remote agents registered yet.', { exact: true }).waitFor();
+  assert.equal(recovered.list().length, 0); assert.equal(f.central.list('operator').length, 0);
+  assert.deepEqual(errors, []);
+  console.log('Real registration integration passed: independent dashboard → API plugin → trusted TLS target; pair once, probe, edit, reject duplicate, retain failed revoke, recover and revoke target authorization.');
+} finally {
+  await browser?.close(); await dashboard?.stop(); await api?.stop();
+  for (const action of cleanup.reverse()) await action();
+}
