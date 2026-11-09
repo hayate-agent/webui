@@ -23,8 +23,11 @@ messages and stream creation.
 Login and account changes use the identity backend. Changing the login name or
 password requires the current password and revokes existing sessions. Session
 cookies are Secure, HttpOnly and SameSite-restricted. With a compatible identity
-backend, trusted interaction in the visible page renews the idle session and its
-cookie at most once a minute. Polling and SSE do not renew idle sessions. Session
+backend, trusted keyboard, pointer, wheel and input/editing interaction in the
+visible page renews the idle session and its cookie at most once a minute.
+Interaction suppressed by that throttle is coalesced into one trailing renewal,
+so the last interaction retains the full inactivity interval. This is not a
+periodic keepalive; logout cancels pending activity and hidden pages do not flush it. Polling and SSE do not renew idle sessions. Session
 hashes survive backend restarts; upgrading an older memory-only backend requires
 one fresh login. Idle expiry, logout and account-change revocation remain active.
 The renewal endpoint requires the corresponding Plugins session-continuity update;

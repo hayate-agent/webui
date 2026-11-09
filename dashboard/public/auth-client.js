@@ -1,14 +1,35 @@
 let signingIn;
 let renewalEnabled = false, renewing = false, nextRenewal = 0;
-// Only actual interaction renews idle time. Polling, SSE and synthetic events do not.
-async function renewOnInteraction(event) {
-  if (!event.isTrusted || document.visibilityState !== 'visible' || !renewalEnabled || signingIn || renewing || Date.now() < nextRenewal) return;
-  renewing = true; nextRenewal = Date.now() + 60000;
-  try { await call('/api/auth/renew', {}); }
-  catch { nextRenewal = Date.now() + 10000; /* Do not replay work or force a login from this background request. */ }
-  finally { renewing = false; }
+let renewalTimer, pendingActivity = false;
+function cancelPendingRenewal() {
+  clearTimeout(renewalTimer); renewalTimer = undefined; pendingActivity = false;
 }
-for (const type of ['pointerdown', 'keydown', 'wheel']) document.addEventListener(type, renewOnInteraction, { passive: true });
+function canRenew() {
+  return document.visibilityState === 'visible' && renewalEnabled && !signingIn;
+}
+function schedulePendingRenewal() {
+  if (!pendingActivity || renewing || renewalTimer !== undefined) return;
+  renewalTimer = setTimeout(() => {
+    renewalTimer = undefined;
+    return renewPendingActivity();
+  }, Math.max(0, nextRenewal - Date.now()));
+}
+async function renewPendingActivity() {
+  if (!canRenew()) { cancelPendingRenewal(); return; }
+  if (renewing || !pendingActivity) return;
+  if (Date.now() < nextRenewal) { schedulePendingRenewal(); return; }
+  pendingActivity = false; renewing = true; nextRenewal = Date.now() + 60000;
+  try { await call('/api/auth/renew', {}); }
+  catch { nextRenewal = Date.now() + 10000; /* No retry unless another real interaction was recorded. */ }
+  finally { renewing = false; schedulePendingRenewal(); }
+}
+// A timer may flush recorded activity once; polling/SSE never record activity.
+async function renewOnInteraction(event) {
+  if (!event.isTrusted || !canRenew()) return;
+  pendingActivity = true;
+  return renewPendingActivity();
+}
+for (const type of ['pointerdown', 'keydown', 'wheel', 'input']) document.addEventListener(type, renewOnInteraction, { passive: true });
 async function call(path, data) {
   const response = await fetch(path, data === undefined ? {} : { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Hayate-WebUI': '1' }, body: JSON.stringify(data) });
   const result = await response.json(); if (!response.ok) throw Error(result.error ?? 'Authentication failed'); return result;
@@ -21,7 +42,7 @@ export async function authenticate(force = false) {
   if (!document.getElementById('sign-out')) {
     const logout = document.createElement('button'); logout.id = 'sign-out'; logout.textContent = 'Sign out';
     logout.onclick = async () => {
-      renewalEnabled = false; logout.disabled = true;
+      renewalEnabled = false; cancelPendingRenewal(); logout.disabled = true;
       try {
         await call('/api/auth/logout', {});
         for (const key of Object.keys(sessionStorage)) if (key.startsWith('workspace.') || key.startsWith('hayate.webui.')) sessionStorage.removeItem(key);
@@ -34,6 +55,7 @@ export async function authenticate(force = false) {
   }
   renewalEnabled = status.authenticated && !force;
   if (renewalEnabled) return;
+  cancelPendingRenewal();
   signingIn = new Promise(resolve => {
     document.body.classList.add('auth-locked');
     const dialog = document.createElement('dialog'); dialog.className = 'auth-dialog';

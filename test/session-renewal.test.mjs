@@ -7,7 +7,7 @@ test('session renewal is driven only by visible trusted interaction and throttle
   const listeners = new Map(), calls = []; let now = 100000;
   const document = { visibilityState: 'visible', getElementById: () => ({}), addEventListener: (type, callback) => listeners.set(type, callback) };
   const source = (await readFile(new URL('../dashboard/public/auth-client.js', import.meta.url), 'utf8')).replaceAll('export async function', 'async function');
-  const context = vm.createContext({ document, Date: { now: () => now }, fetch: async (url, options) => { calls.push({ url, options }); return { ok: true, json: async () => ({ required: true, authenticated: true }) }; } });
+  const context = vm.createContext({ document, Date: { now: () => now }, setTimeout: () => 1, clearTimeout: () => {}, fetch: async (url, options) => { calls.push({ url, options }); return { ok: true, json: async () => ({ required: true, authenticated: true }) }; } });
   vm.runInContext(source + '\nglobalThis.start = authenticate;', context);
   await context.start(); calls.length = 0;
   const event = listeners.get('keydown');
