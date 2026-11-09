@@ -1,5 +1,5 @@
 {
-  "contentDigest": "dca7116dfbcfd2849913fd73880f94bdbe219427d7f7a821544aaf6a1c5592e9",
+  "contentDigest": "9f31251f7b27c27042fe63679db5c702280bdd4364eb3317a2828f5414d93608",
   "files": [
     {
       "mode": "100644",
@@ -34,7 +34,7 @@
     {
       "mode": "100644",
       "path": "PUBLIC-SOURCE.json",
-      "sha256": "14ec5df200461d0e1e42f6d9366705e921e26c887eb1022f47eddff806499449"
+      "sha256": "b75e25d200fef14f1fc5aa99cc080ba87667ec65c0f985cdd786e7cfab7ffaae"
     },
     {
       "mode": "100644",
@@ -54,7 +54,7 @@
     {
       "mode": "100644",
       "path": "dashboard/public/auth-client.js",
-      "sha256": "c7c0494ce67fb0f202cfe9697e3945cffbcb07ee133a6ae7660ae8a1f6d1bd07"
+      "sha256": "b92725e28b6c2d252d1846890baceda7ad6943d9384b3845de6b648548705131"
     },
     {
       "mode": "100644",
@@ -89,7 +89,7 @@
     {
       "mode": "100644",
       "path": "docs/FEATURE-STATUS.md",
-      "sha256": "feeeb37194b342a74d4cec62b48480f61c0e092c177bddfc7519adaffd4b0287"
+      "sha256": "c803d566be20479e1f3beb961cb45d38b2dd39dab48edfc4222fb2d515db00db"
     },
     {
       "mode": "100644",
@@ -134,7 +134,7 @@
     {
       "mode": "100644",
       "path": "test/browser.mjs",
-      "sha256": "6584eac8f26271a92e3fa12475b173d2d1272c5c3ae9cbd50dab48b83d08e075"
+      "sha256": "a8c640fe042ae276c77c020e5310b4fa705e04d8a620b186fe951773f96cdaee"
     },
     {
       "mode": "100644",
@@ -145,6 +145,11 @@
       "mode": "100644",
       "path": "test/server.test.mjs",
       "sha256": "fe7b6c1081969f32d5ebc6a55ca370e9522ab157896930b16ea5219d492efdb6"
+    },
+    {
+      "mode": "100644",
+      "path": "test/session-renewal.test.mjs",
+      "sha256": "b156c47eaa8e2433f5bd40eb7efd56fcb2fba0e5f8068f52302ed6396fd98d88"
     },
     {
       "mode": "100644",
@@ -164,5 +169,5 @@
   ],
   "historyPolicy": "fresh public snapshot; no private ancestry or source author metadata",
   "schema": 1,
-  "sourceSHA": "e139a2884b5a564f592f7f05944eb1bbcb986d98"
+  "sourceSHA": "35b3742e685e4826b0afc49cb8db03880bc6e414"
 }

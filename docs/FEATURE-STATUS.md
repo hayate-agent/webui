@@ -22,7 +22,13 @@ messages and stream creation.
 
 Login and account changes use the identity backend. Changing the login name or
 password requires the current password and revokes existing sessions. Session
-cookies are Secure, HttpOnly and SameSite-restricted. Account changes do not change
+cookies are Secure, HttpOnly and SameSite-restricted. With a compatible identity
+backend, trusted interaction in the visible page renews the idle session and its
+cookie at most once a minute. Polling and SSE do not renew idle sessions. Session
+hashes survive backend restarts; upgrading an older memory-only backend requires
+one fresh login. Idle expiry, logout and account-change revocation remain active.
+The renewal endpoint requires the corresponding Plugins session-continuity update;
+older backends keep their existing expiry behavior. Account changes do not change
 ownership of projects or credentials.
 
 ## Integration requirements
