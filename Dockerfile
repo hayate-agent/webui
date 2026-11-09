@@ -11,7 +11,7 @@ ENV NODE_ENV=production
 WORKDIR /app
 COPY --from=build --chown=node:node /build/dist ./dist
 COPY --chown=node:node server ./server
-COPY --chown=node:node package.json ./package.json
+COPY --chown=node:node package.json LICENSE ./
 USER node
 EXPOSE 3210
 CMD ["node", "server/main.mjs"]

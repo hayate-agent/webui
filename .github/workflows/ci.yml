@@ -7,6 +7,8 @@ permissions:
 jobs:
   check:
     runs-on: ubuntu-latest
+    env:
+      HAYATE_PLUGINS_TEST_REV: 7790445348918539fa37a056568e212bd8612b5d
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -20,6 +22,12 @@ jobs:
       - run: npm run test:browser
       - name: Registration against real API and trusted TLS target
         run: |
-          git -c http.userAgent=Hayate-Release-Operator/1.0 clone --depth=1 https://git.vanillacore.net/harness/plugins.git /tmp/backend
+          git init -q /tmp/backend
+          git -C /tmp/backend -c http.userAgent=Hayate-Release-Operator/1.0 fetch --depth=1 https://git.vanillacore.net/harness/plugins.git "$HAYATE_PLUGINS_TEST_REV"
+          git -C /tmp/backend checkout -q --detach FETCH_HEAD
           echo "backend=$(git -C /tmp/backend rev-parse HEAD)"
+          npm ci --prefix /tmp/backend/agent-link --include=dev --ignore-scripts
+          npm run build --prefix /tmp/backend/agent-link
           HAYATE_PLUGINS_ROOT=/tmp/backend node test/registration.integration.mjs
+          HAYATE_PLUGINS_ROOT=/tmp/backend node test/websocket.integration.mjs
+          HAYATE_PLUGINS_ROOT=/tmp/backend node test/standalone.integration.mjs

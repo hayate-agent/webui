@@ -12,8 +12,27 @@ One-time organization-owner setup:
    App. Existing App permissions are sufficient for source/workflow publication;
    repository-administration permission does not need to be added permanently.
 
-After that, mint a token restricted to this repository with contents/PR/workflow
-write, run the standalone build/tests, and publish:
+## Automatic publication
+
+The trusted deployment automation schedules the standalone WebUI publisher every
+five minutes. It requires the exact protected source revision's native CI, audits
+the public export and tests it in a separate credential-free container, including
+browser and real backend integration tests. An unchanged complete public tree is
+a no-op, not a new pull request.
+
+Changed snapshots are proposed on `publish/webui`. The independent maintainer
+verifies the immutable successful producer receipt and every public file before
+merging; the real GitHub Actions `check` remains required. No operator token is
+passed to builds and no private source history is pushed. A publication watchdog
+reports persistent source/public lag through an assigned GitHub incident and
+closes it after recovery. Product deployment and GHCR release remain separate.
+
+## Manual recovery
+
+The following existing manual helper is only an operator recovery path; it is not
+the scheduled publisher and does not waive automated checks or repository rules.
+Mint a token restricted to this repository with contents/PR/workflow write, run
+the standalone build/tests, and publish:
 
 ```sh
 npm ci --include=dev --ignore-scripts
