@@ -42,7 +42,7 @@ export async function mountWorkspace({ request, notice, markdown }) {
   async function refreshAgents() {
     if (capabilities['agent-hub'] === 1) agentRoster = (await request('/api/workspace/agents')).agents;
     agentPicker.replaceChildren();
-    const local = node('option', state.agent); local.value = 'local'; agentPicker.append(local);
+    const local = node('option', capabilities['local-agent'] === false ? 'Choose an agent' : state.agent); local.value = 'local'; local.disabled = capabilities['local-agent'] === false; agentPicker.append(local);
     for (const agent of agentRoster) { const option = node('option', agent.name); option.value = agent.id; agentPicker.append(option); }
     agentPicker.value = browsingAgent ?? 'local';
     let index = 0;
@@ -99,9 +99,9 @@ export async function mountWorkspace({ request, notice, markdown }) {
   }
   function renderTree() {
     const fragment = document.createDocumentFragment();
-    fragment.append(button('＋ New project', () => projectDialog()));
+    if (capabilities['project-creation'] !== false) fragment.append(button('＋ New project', () => projectDialog()));
     if (capabilities['agent-hub'] === 1) fragment.append(button('Agents', agentsDialog));
-    fragment.append(renderAgentTree(state, undefined, state.agent));
+    if (capabilities['local-agent'] !== false) fragment.append(renderAgentTree(state, undefined, state.agent));
     for (const agent of agentRoster) fragment.append(renderAgentTree(agentSnapshots.get(agent.id) ?? { projects: [], streams: [] }, agent.id, agent.name));
     tree.replaceChildren(fragment);
   }
@@ -162,7 +162,7 @@ export async function mountWorkspace({ request, notice, markdown }) {
   function renderTargets() {
     composer.hidden = management;
     if (management) { agentLabel.hidden = true; projectLabel.hidden = true; chatContext.hidden = true; return; }
-    send.disabled = sending;
+    send.disabled = sending || capabilities['local-agent'] === false && !browsingAgent && !remoteSelection;
     const existing = Boolean(streamId || remoteSelection);
     agentLabel.hidden = existing; projectLabel.hidden = existing; chatContext.hidden = !existing;
     const agentId = remoteSelection?.agentId ?? browsingAgent;
@@ -308,7 +308,7 @@ export async function mountWorkspace({ request, notice, markdown }) {
     const wrapper = node('label', label); const e = node('input'); e.type = type; e.value = value; wrapper.append(e); form.append(wrapper); return e;
   }
   function formDialog(title, build) {
-    return dialog(title, d => { const form = node('form'); d.append(form); const save = build(form, d); const submit = node('button', 'Save'); submit.type = 'submit'; form.append(submit); form.onsubmit = event => { event.preventDefault(); run(save)(); }; });
+    return dialog(title, d => { const form = node('form'); d.append(form); const save = build(form, d); const submit = node('button', 'Save'); submit.type = 'submit'; form.append(submit); form.onsubmit = event => { event.preventDefault(); if (submit.disabled) return; submit.disabled = true; run(async () => { try { await save(); } finally { submit.disabled = false; } })(); }; });
   }
   function chooseDirectory(done) {
     const d = dialog('Server directories', d => { d.append(node('p', 'Only operator-allowed server roots are shown. This does not grant project-code trust.')); });
@@ -464,12 +464,32 @@ export async function mountWorkspace({ request, notice, markdown }) {
   async function agentsDialog() {
     notice(''); management = true; const revision = ++navigationRevision;
     headingText.textContent = 'Agents'; renderTargets(); body.replaceChildren(node('p', 'Loading registered agents…'));
-    const data = await request('/api/workspace/agents');
+    const [data, incoming, outbound] = await Promise.all([
+      request('/api/workspace/agents'),
+      capabilities['agent-link-relay'] === 1 ? request('/api/workspace/agent-relay') : null,
+      capabilities['agent-link-outbound'] === 1 ? request('/api/workspace/agent-outbound') : null,
+    ]);
     if (!management || revision !== navigationRevision) return;
     const content = node('section', undefined, 'agent-management');
     content.append(node('h2', 'Registered agents'), node('p', 'Register an agent before adding it to projects. Registration establishes a connection; it does not share project files or credentials.'));
-    if (data.adapters.length) content.append(button('Register an agent', () => registrationForm(data)));
-    else content.append(node('p', 'Install and configure an agent transport adapter on this instance before registering an agent.'));
+    const direct = { ...data, adapters: data.adapters.filter(adapter => adapter !== 'hayate-wss') };
+    if (direct.adapters.length) content.append(button('Register an agent', () => registrationForm(direct)));
+    if (incoming && data.adapters.includes('hayate-wss')) content.append(button('Invite outbound agent', () => outboundInvitation(revision)), button('Refresh incoming connections', agentsDialog));
+    if (outbound) {
+      const local = node('article', undefined, 'agent-card'); local.setAttribute('aria-label', 'This agent outbound connection');
+      local.append(node('h3', 'This agent → central dashboard'), node('p', outbound.endpoint ?? 'No outbound connection configured'), node('p', outbound.revoked ? 'Authorization revoked' : outbound.connected ? 'WSS connected; central approval is required for work' : 'Disconnected'));
+      if (!outbound.id) local.append(button('Connect this agent outbound', () => outboundEnrollment(revision)));
+      else local.append(button('Disconnect outbound link', async () => { if (!confirm('Revoke this outbound connection? Accepted work is not cancelled.')) return; await request('/api/workspace/agent-outbound', { action: 'disconnect' }); if (management) await agentsDialog(); }));
+      content.append(local);
+    }
+    for (const pending of incoming?.agents.filter(agent => !agent.approved && !agent.revoked) ?? []) {
+      const card = node('article', undefined, 'agent-card'); card.setAttribute('aria-label', `Incoming agent ${pending.name}`);
+      card.append(node('h3', pending.name), node('p', `Target identity: ${pending.remoteAgent}`), node('p', `Permissions: ${pending.capabilities.join(', ')}`), node('p', pending.connected ? 'Connected · awaiting your approval' : 'Disconnected · not registered'));
+      card.append(button('Approve and register', async event => { event.target.disabled = true; try { await request(`/api/workspace/agent-relay/${pending.id}/accept`, {}); await refreshAgents(); if (management) await agentsDialog(); } finally { event.target.disabled = false; } }),
+        button('Reject connection', async event => { event.target.disabled = true; try { await request(`/api/workspace/agent-relay/${pending.id}/reject`, {}); if (management) await agentsDialog(); } finally { event.target.disabled = false; } }));
+      content.append(card);
+    }
+    if (!data.adapters.length) content.append(node('p', 'Install and configure an agent transport adapter on this instance before registering an agent.'));
     if (!data.agents.length) content.append(node('p', 'No remote agents registered yet.'));
     for (const agent of data.agents) {
       const card = node('article', undefined, 'agent-card'); card.setAttribute('aria-label', `Registered agent ${agent.name}`);
@@ -512,6 +532,37 @@ export async function mountWorkspace({ request, notice, markdown }) {
       card.append(actions); content.append(card);
     }
     body.replaceChildren(content);
+  }
+  function outboundInvitation(revision) {
+    formDialog('Invite outbound agent', (form, d) => {
+      form.append(node('p', 'The agent connects outward over HTTPS/WSS. No inbound agent port is required. You must approve the incoming connection separately.'));
+      const name = field(form, 'Agent name'); name.required = true; name.maxLength = 160;
+      return async () => {
+        const invite = await request('/api/workspace/agent-relay', { name: name.value }); d.close();
+        if (!management || navigationRevision !== revision) return;
+        headingText.textContent = 'Outbound invitation';
+        const section = node('section', undefined, 'agent-management');
+        const code = node('input'); code.type = 'password'; code.readOnly = true; code.value = invite.code; code.autocomplete = 'off'; code.setAttribute('aria-label', 'Outbound invitation code');
+        section.append(node('h2', 'Connect the target agent'), node('p', invite.endpoint), node('p', `Single use · expires ${new Date(invite.expiresAt).toLocaleTimeString()}`), code,
+          button('Show code', event => { code.type = code.type === 'password' ? 'text' : 'password'; event.target.textContent = code.type === 'text' ? 'Hide code' : 'Show code'; }),
+          button('Copy code', () => navigator.clipboard.writeText(code.value)),
+          node('p', 'On the target, open Agents → Connect this agent outbound, or use /agent-link-outbound enroll <HTTPS endpoint> <invitation code> as administrator. The outbound plugin must be enabled first.'),
+          button('Back to incoming connections', agentsDialog));
+        body.replaceChildren(section);
+      };
+    });
+  }
+  function outboundEnrollment(revision) {
+    formDialog('Connect this agent outbound', (form, d) => {
+      const endpoint = field(form, 'Central HTTPS endpoint', '', 'url'); endpoint.required = true;
+      const code = field(form, 'Outbound invitation code', '', 'password'); code.required = true; code.autocomplete = 'one-time-code';
+      form.append(node('p', 'Get a single-use invitation from the central dashboard. TLS and local relay policy must allow the endpoint. The central operator approves the connection after enrollment.'));
+      return async () => {
+        const input = { endpoint: endpoint.value, code: code.value.trim() }; code.value = '';
+        await request('/api/workspace/agent-outbound', input); d.close();
+        if (management && navigationRevision === revision) await agentsDialog();
+      };
+    });
   }
   function registrationForm(data) {
     management = true; const revision = ++navigationRevision; headingText.textContent = 'Register an agent'; renderTargets();
@@ -575,6 +626,7 @@ export async function mountWorkspace({ request, notice, markdown }) {
   composer.onsubmit = event => { event.preventDefault(); if (sending) return; sending = true; send.disabled = true; run(async () => {
     try {
     if (!input.value.trim()) return;
+    if (capabilities['local-agent'] === false && !browsingAgent && !remoteSelection) throw Error('Choose a registered agent before sending');
     let id = streamId || '';
     if (browsingAgent && !remoteSelection) id = `remote-new:${browsingAgent}`;
     if (remoteSelection || id.startsWith('remote-new:')) {

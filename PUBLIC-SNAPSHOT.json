@@ -1,0 +1,168 @@
+{
+  "contentDigest": "dca7116dfbcfd2849913fd73880f94bdbe219427d7f7a821544aaf6a1c5592e9",
+  "files": [
+    {
+      "mode": "100644",
+      "path": ".dockerignore",
+      "sha256": "3bc6f636df478ebd5bfeeeb1f078f54f6323dfbdaa9f1144e1424c6b7773f8c8"
+    },
+    {
+      "mode": "100644",
+      "path": ".github/workflows/ci.yml",
+      "sha256": "c323de70ef35cb3e63ad9ea44655f611ee04a0f4f37bbfde8ea3ffdd19d7a3f3"
+    },
+    {
+      "mode": "100644",
+      "path": ".github/workflows/release.yml",
+      "sha256": "1500fc5062bb82ededd8b1ccea6c281990dd84ff6eae77c928942e96c420e306"
+    },
+    {
+      "mode": "100644",
+      "path": ".gitignore",
+      "sha256": "9cef3ef999586b165163b6b55b37289879f0537533fe7c918a10c6b7bd23d7eb"
+    },
+    {
+      "mode": "100644",
+      "path": "Dockerfile",
+      "sha256": "524de6ac3ed65caba8d587d8cb3b17075661d054f85b99a4d5acacde9bf57a99"
+    },
+    {
+      "mode": "100644",
+      "path": "LICENSE",
+      "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30"
+    },
+    {
+      "mode": "100644",
+      "path": "PUBLIC-SOURCE.json",
+      "sha256": "14ec5df200461d0e1e42f6d9366705e921e26c887eb1022f47eddff806499449"
+    },
+    {
+      "mode": "100644",
+      "path": "README.md",
+      "sha256": "258fcf3a4c60e56a8679f1c665506bd667ddb5e8be738355fdbe286a28f227fe"
+    },
+    {
+      "mode": "100644",
+      "path": "compose.yaml",
+      "sha256": "6fce61de4b1e0d96605a927564b2aa8d3b578510cdc9849860081c7adbdc0886"
+    },
+    {
+      "mode": "100644",
+      "path": "dashboard/public/app.js",
+      "sha256": "1fa9115ef0949de7455b51eeb5726fcb85c2317463a24a8e544580b1da7466c8"
+    },
+    {
+      "mode": "100644",
+      "path": "dashboard/public/auth-client.js",
+      "sha256": "c7c0494ce67fb0f202cfe9697e3945cffbcb07ee133a6ae7660ae8a1f6d1bd07"
+    },
+    {
+      "mode": "100644",
+      "path": "dashboard/public/index.html",
+      "sha256": "79329f7b44bf5f8cdf808f737c53c57f63600724ef0b3c4ba3ebe648d67ba342"
+    },
+    {
+      "mode": "100644",
+      "path": "dashboard/public/style.css",
+      "sha256": "7480b7381f87cd33cb3d93b0630159d8240885f02577db9ba2bf2d307c170bd4"
+    },
+    {
+      "mode": "100644",
+      "path": "dashboard/public/workspace-client.js",
+      "sha256": "db8cca0b35983b5e0548cb685003f5cdf42ca13eb3ae70ff8d4661cd8ccaf69c"
+    },
+    {
+      "mode": "100644",
+      "path": "docs/AGENT-PLUGIN-ADMINISTRATION.md",
+      "sha256": "c02a7038a8d92d15cded7704f86fe66a140bb999c8ca73b3d3f9d33023e5e8cb"
+    },
+    {
+      "mode": "100644",
+      "path": "docs/AGENT-REGISTRATION.md",
+      "sha256": "8957098ef8533e564dde49aaed7c53947feef3b60898941212c292ebb6e1e01e"
+    },
+    {
+      "mode": "100644",
+      "path": "docs/BOUNDARIES.md",
+      "sha256": "9a8d2ee95299f0f84fc2b1a75cf9f9f03f35b340912b3488b60b70a72a58ede1"
+    },
+    {
+      "mode": "100644",
+      "path": "docs/FEATURE-STATUS.md",
+      "sha256": "feeeb37194b342a74d4cec62b48480f61c0e092c177bddfc7519adaffd4b0287"
+    },
+    {
+      "mode": "100644",
+      "path": "docs/GITHUB-PUBLICATION.md",
+      "sha256": "61263634f4d3badd6e672a93ba8669fbd183873345eae2dca349e63910d30fea"
+    },
+    {
+      "mode": "100644",
+      "path": "docs/OUTBOUND-AGENTS.md",
+      "sha256": "20132b69ccf2c575b6c9b6d788c070b7741f2b8809e64f02540970f0b42049c0"
+    },
+    {
+      "mode": "100644",
+      "path": "package-lock.json",
+      "sha256": "e0772b40db418380a6307277239e32c6fe4a790d4fec7000324342bb6b39422e"
+    },
+    {
+      "mode": "100644",
+      "path": "package.json",
+      "sha256": "55b00e89e5de4ed1ff4b2abca1bedf5a79e4ce91fd25e36fb28e1b29759495eb"
+    },
+    {
+      "mode": "100644",
+      "path": "scripts/build.mjs",
+      "sha256": "21ecf1fec5a96dbc50f31d6e53e0dc9814ffb63f194c6e10d5f6148f18a9dfcb"
+    },
+    {
+      "mode": "100644",
+      "path": "scripts/publish_github.py",
+      "sha256": "66ee95d92a736578eb094ff15d562197806412f45375138f231d07e2bf9c3130"
+    },
+    {
+      "mode": "100644",
+      "path": "server/main.mjs",
+      "sha256": "9a5e09c35719ef24aeaa586377786c8f2160068668e2b185fa009329abb6a390"
+    },
+    {
+      "mode": "100644",
+      "path": "server/server.mjs",
+      "sha256": "e0233f6f7daf1c1ebbf15481aca0d8f6df9930173fd9fd094c4e0ddccdc63803"
+    },
+    {
+      "mode": "100644",
+      "path": "test/browser.mjs",
+      "sha256": "6584eac8f26271a92e3fa12475b173d2d1272c5c3ae9cbd50dab48b83d08e075"
+    },
+    {
+      "mode": "100644",
+      "path": "test/registration.integration.mjs",
+      "sha256": "f3338a258c851947ea711a59513a9d98f345930784843ad71e25acda2c9f63b7"
+    },
+    {
+      "mode": "100644",
+      "path": "test/server.test.mjs",
+      "sha256": "fe7b6c1081969f32d5ebc6a55ca370e9522ab157896930b16ea5219d492efdb6"
+    },
+    {
+      "mode": "100644",
+      "path": "test/standalone.integration.mjs",
+      "sha256": "0f2062b70e7aa25cd4fd761a1b7cc7d7106c86b4d5c25336218f4aa64081b648"
+    },
+    {
+      "mode": "100644",
+      "path": "test/unified.browser.mjs",
+      "sha256": "f202dfe6f45535860e6292fc985c0c5b3a976706085e068aeb56f913c39b1e64"
+    },
+    {
+      "mode": "100644",
+      "path": "test/websocket.integration.mjs",
+      "sha256": "d8b09c47968d186783a4fb711a67daa734e74ca9a249366a6b3424d95a7fe50a"
+    }
+  ],
+  "historyPolicy": "fresh public snapshot; no private ancestry or source author metadata",
+  "schema": 1,
+  "sourceSHA": "e139a2884b5a564f592f7f05944eb1bbcb986d98"
+}
