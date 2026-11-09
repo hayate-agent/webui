@@ -2,9 +2,11 @@ import { chromium } from 'playwright';
 import { createServer } from 'node:http';
 import { createDashboard } from '../server/server.mjs';
 import assert from 'node:assert/strict';
+let renewals = 0;
 const backend = createServer((req, res) => {
   res.setHeader('Content-Type', 'application/json');
-  if (req.url === '/api/auth') res.end('{"required":false,"authenticated":true}');
+  if (req.url === '/api/auth') res.end('{"required":true,"authenticated":true}');
+  else if (req.url === '/api/auth/renew') { renewals++; res.end('{"authenticated":true}'); }
   else if (req.url === '/api/state') res.end(JSON.stringify({ agent: 'Fixture agent', backends: { workspaces: 1 }, chats: [] }));
   else if (req.url === '/api/workspace/capabilities') res.end('{"workspaces":1}');
   else if (req.url === '/api/workspace/state') res.end(JSON.stringify({ agent: 'Fixture agent', projects: [], streams: [], roots: ['/work'], settings: {} }));
@@ -18,7 +20,12 @@ const browser = await chromium.launch({ headless: true }); const page = await br
 try {
   await page.goto(origin); await page.getByLabel('Active agent', { exact: true }).waitFor();
   assert.equal(await page.getByRole('navigation', { name: 'Projects and streams' }).isVisible(), true);
-  await page.getByRole('button', { name: 'Workspace settings', exact: true }).click(); await page.getByRole('menuitem', { name: 'Global settings', exact: true }).waitFor();
+  assert.equal(renewals, 0, 'startup requests must not renew idle sessions');
+  const renewed = page.waitForResponse(response => response.url().endsWith('/api/auth/renew'));
+  await page.getByRole('button', { name: 'Workspace settings', exact: true }).click(); await renewed;
+  await page.getByRole('menuitem', { name: 'Global settings', exact: true }).waitFor();
+  await page.keyboard.press('Escape');
+  assert.equal(renewals, 1, 'trusted interaction renews once and subsequent input is throttled');
   assert.deepEqual(errors, []);
   console.log('Independent dashboard: served bundle, fixed API proxy, default workspace, agent picker and menus passed.');
 } finally { await browser.close(); await dashboard.stop(); backend.closeAllConnections(); await new Promise(resolve => backend.close(resolve)); }

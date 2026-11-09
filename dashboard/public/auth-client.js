@@ -1,4 +1,14 @@
 let signingIn;
+let renewalEnabled = false, renewing = false, nextRenewal = 0;
+// Only actual interaction renews idle time. Polling, SSE and synthetic events do not.
+async function renewOnInteraction(event) {
+  if (!event.isTrusted || document.visibilityState !== 'visible' || !renewalEnabled || signingIn || renewing || Date.now() < nextRenewal) return;
+  renewing = true; nextRenewal = Date.now() + 60000;
+  try { await call('/api/auth/renew', {}); }
+  catch { nextRenewal = Date.now() + 10000; /* Do not replay work or force a login from this background request. */ }
+  finally { renewing = false; }
+}
+for (const type of ['pointerdown', 'keydown', 'wheel']) document.addEventListener(type, renewOnInteraction, { passive: true });
 async function call(path, data) {
   const response = await fetch(path, data === undefined ? {} : { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Hayate-WebUI': '1' }, body: JSON.stringify(data) });
   const result = await response.json(); if (!response.ok) throw Error(result.error ?? 'Authentication failed'); return result;
@@ -11,18 +21,19 @@ export async function authenticate(force = false) {
   if (!document.getElementById('sign-out')) {
     const logout = document.createElement('button'); logout.id = 'sign-out'; logout.textContent = 'Sign out';
     logout.onclick = async () => {
-      logout.disabled = true;
+      renewalEnabled = false; logout.disabled = true;
       try {
         await call('/api/auth/logout', {});
         for (const key of Object.keys(sessionStorage)) if (key.startsWith('workspace.') || key.startsWith('hayate.webui.')) sessionStorage.removeItem(key);
         location.reload();
-      } catch { logout.disabled = false; logout.textContent = 'Sign out failed · retry'; }
+      } catch { renewalEnabled = true; logout.disabled = false; logout.textContent = 'Sign out failed · retry'; }
     };
     const settings = document.createElement('button'); settings.id = 'account-settings'; settings.textContent = 'Account settings';
     settings.onclick = () => { void accountSettings().catch(error => { settings.textContent = error.message; }); };
     document.querySelector('aside').append(settings, logout);
   }
-  if (status.authenticated && !force) return;
+  renewalEnabled = status.authenticated && !force;
+  if (renewalEnabled) return;
   signingIn = new Promise(resolve => {
     document.body.classList.add('auth-locked');
     const dialog = document.createElement('dialog'); dialog.className = 'auth-dialog';
@@ -41,6 +52,7 @@ export async function authenticate(force = false) {
       try {
         const secret = password.value; password.value = '';
         await call('/api/auth/login', { username: username.value, password: secret });
+        renewalEnabled = true; nextRenewal = Date.now() + 60000;
         dialog.close(); dialog.remove(); document.body.classList.remove('auth-locked'); resolve();
       } catch (failure) { error.textContent = failure.message; password.focus(); }
       finally { submit.disabled = false; }
