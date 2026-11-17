@@ -1,5 +1,5 @@
 {
-  "contentDigest": "1a50568789d200f6d230112389171941b3b5e0fef26bf886f24c4dfe6afe25af",
+  "contentDigest": "d44dee03b7d01ea5287f2f16f181273498e96a2638991082861ef22f85040cbc",
   "files": [
     {
       "mode": "100644",
@@ -34,7 +34,7 @@
     {
       "mode": "100644",
       "path": "PUBLIC-SOURCE.json",
-      "sha256": "6b582e6ace69557821ac130915c110cf51967866c0b81c3bcee6488b10f93e14"
+      "sha256": "13c83e299701b71083b3242d01a13b60d6e57dc46e5e173648eeb522117e7475"
     },
     {
       "mode": "100644",
@@ -64,7 +64,7 @@
     {
       "mode": "100644",
       "path": "dashboard/public/style.css",
-      "sha256": "7480b7381f87cd33cb3d93b0630159d8240885f02577db9ba2bf2d307c170bd4"
+      "sha256": "a20487ecc91e763eec881ce6159bac43bb4315a4b1e0c92dea1dad779dd085ea"
     },
     {
       "mode": "100644",
@@ -109,7 +109,7 @@
     {
       "mode": "100644",
       "path": "package.json",
-      "sha256": "55b00e89e5de4ed1ff4b2abca1bedf5a79e4ce91fd25e36fb28e1b29759495eb"
+      "sha256": "3cee175a77468e89c0f1df682c0d991cf790c6d718765f5f50622d320e653e81"
     },
     {
       "mode": "100644",
@@ -158,6 +158,11 @@
     },
     {
       "mode": "100644",
+      "path": "test/sidebar.browser.mjs",
+      "sha256": "7505713d37a65d4fb2d0c576de3495a7c05dc6bdef92e389ee5956bbdf035825"
+    },
+    {
+      "mode": "100644",
       "path": "test/standalone.integration.mjs",
       "sha256": "0f2062b70e7aa25cd4fd761a1b7cc7d7106c86b4d5c25336218f4aa64081b648"
     },
@@ -174,5 +179,5 @@
   ],
   "historyPolicy": "fresh public snapshot; no private ancestry or source author metadata",
   "schema": 1,
-  "sourceSHA": "7f5495c1a1c387a7a3b5ad60182342cc4137bdf1"
+  "sourceSHA": "12d0458174a0e04345a7ecd221ccd945d246ba58"
 }

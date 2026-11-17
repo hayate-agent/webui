@@ -9,7 +9,7 @@
   "scripts": {
     "build": "node scripts/build.mjs",
     "test": "node --test test/*.test.mjs",
-    "test:browser": "node test/browser.mjs && node test/unified.browser.mjs",
+    "test:browser": "node test/browser.mjs && node test/unified.browser.mjs && node test/sidebar.browser.mjs",
     "start": "node server/main.mjs"
   },
   "dependencies": { "dompurify": "3.4.17", "marked": "18.1.1" },
