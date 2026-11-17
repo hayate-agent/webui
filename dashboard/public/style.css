@@ -5,3 +5,17 @@
 .auth-dialog label{display:grid;gap:6px}.auth-locked>:not(.auth-dialog){visibility:hidden}.auth-dialog::backdrop{background:var(--bg)}
 
 .agent-picker{font-family:inherit}aside>.agent-picker{max-width:none;width:100%;color:var(--text)}aside>.agent-picker select{width:100%;font:inherit;padding:9px 12px}aside .brand span{display:none}.workspace-composer>button[type=submit]{margin-left:auto}.standalone-chats{min-height:42px;padding:8px 0;border-top:1px solid var(--line)}.standalone-chats>.workspace-stream-row{margin-left:0}.workspace-navigation{display:flex;gap:6px}.workspace-navigation button{flex:1}.workspace-navigation [aria-pressed=true]{background:var(--user);border-color:var(--accent)}.agent-picker{display:grid;gap:2px;max-width:50%;font-size:12px;color:var(--muted)}.agent-picker select{max-width:100%;min-width:0;background:var(--bg);color:var(--text);border:1px solid var(--line);border-radius:8px;padding:6px}.workspace-error{color:var(--danger);margin:0;font-size:13px}.account-dialog label{display:grid;gap:5px}.account-dialog p{max-width:420px;font-size:13px}.account-dialog [role=alert]{color:var(--danger)}@media(max-width:760px){body:has(.workspace-screen:not([hidden]))>aside{grid-template-rows:auto minmax(0,1fr) auto}.workspace-navigation{grid-column:2;grid-row:1}.workspace-screen header{flex-wrap:wrap}.agent-picker{max-width:70%}#account-settings,#sign-out{padding:3px 6px;font-size:12px}}
+
+/* PI integrations append unclassed sections alongside the conversation tree.
+   Keep every group reachable without letting it grow the viewport or main row. */
+body>aside{overflow:auto}
+body>aside>nav{flex-shrink:0;min-height:42px}
+body>aside>section{flex:0 0 auto;min-width:0;max-width:100%}
+body>aside>section h2{margin:0 0 8px;font-size:13px;line-height:1.4;font-weight:650;overflow-wrap:anywhere}
+body>aside>section button{display:block;width:100%;max-width:100%;min-width:0;margin:0 0 4px;padding:6px 8px;text-align:left;white-space:normal;overflow-wrap:anywhere;font-size:13px;line-height:1.4}
+@media(max-width:760px){
+  body,body:has(.workspace-screen:not([hidden])){grid-template-rows:min(38dvh,320px) minmax(0,1fr)}
+  body>aside,body:has(.workspace-screen:not([hidden]))>aside{display:flex;flex-direction:column;gap:8px}
+  body>aside>*{flex-shrink:0}
+  body>aside>nav{flex:0 0 auto}
+}
