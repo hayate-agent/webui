@@ -1,4 +1,16 @@
 // Optional frontend projection. No project/agent/secret domain state is stored here.
+export async function discoverAgent(request) {
+  const [streams, projects] = await Promise.allSettled([
+    request('streams', { action: 'list' }), request('projects', { action: 'list' })
+  ]);
+  return {
+    ...(streams.status === 'fulfilled' ? streams.value : { streams: [] }),
+    projects: projects.status === 'fulfilled' ? projects.value.projects ?? [] : [],
+    unavailable: streams.status === 'rejected' && projects.status === 'rejected',
+    incomplete: streams.status !== projects.status
+  };
+}
+
 export async function mountWorkspace({ request, notice, markdown }) {
   const capabilities = await request('/api/workspace/capabilities');
   if (capabilities.workspaces !== 1) return;
@@ -50,9 +62,9 @@ export async function mountWorkspace({ request, notice, markdown }) {
       while (index < agentRoster.length) {
         const agent = agentRoster[index++];
         try {
-          const [snapshot, projects] = await Promise.all([peerRequest(agent.id, 'streams', { action: 'list' }), peerRequest(agent.id, 'projects', { action: 'list' })]);
+          const snapshot = await discoverAgent((capability, input) => peerRequest(agent.id, capability, input));
           agent.features = snapshot.features ?? [];
-          agentSnapshots.set(agent.id, { ...snapshot, projects: projects.projects ?? [] });
+          agentSnapshots.set(agent.id, snapshot);
         } catch { agentSnapshots.set(agent.id, { projects: [], streams: [], unavailable: true }); }
       }
     }));
@@ -110,6 +122,7 @@ export async function mountWorkspace({ request, notice, markdown }) {
     const choose = () => { agentPicker.value = agentId ?? 'local'; agentPicker.onchange(); };
     const label = button(name, choose); label.className = 'workspace-agent-heading'; fragment.append(label);
     if (source.unavailable) fragment.append(node('p', 'Unavailable', 'workspace-context'));
+    if (source.incomplete) fragment.append(node('p', 'Partial discovery: some projects or conversations could not be loaded.', 'workspace-context'));
     const projects = source.projects.filter(p => !p.deleted && !p.archived && !(p.importSource === 'webui' && p.title === 'Existing chats' && !p.parentId && !Object.keys(p.settings ?? {}).length && !source.projects.some(child => child.parentId === p.id)));
     const query = $('search').value.toLocaleLowerCase();
     const streams = source.streams.filter(s => !s.deleted && !s.archived && !source.projects.some(p => p.id === s.projectId && (p.deleted || p.archived)));

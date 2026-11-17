@@ -1,5 +1,5 @@
 {
-  "contentDigest": "d44dee03b7d01ea5287f2f16f181273498e96a2638991082861ef22f85040cbc",
+  "contentDigest": "42ac84ccf96bc7288b8410f3a4c11a741996406402210437445b4637dbcc669b",
   "files": [
     {
       "mode": "100644",
@@ -34,7 +34,7 @@
     {
       "mode": "100644",
       "path": "PUBLIC-SOURCE.json",
-      "sha256": "13c83e299701b71083b3242d01a13b60d6e57dc46e5e173648eeb522117e7475"
+      "sha256": "21146a1be325e0482d6f67d139c5d20bab79ce45d962ec05fc822db0bc6ce20c"
     },
     {
       "mode": "100644",
@@ -69,7 +69,7 @@
     {
       "mode": "100644",
       "path": "dashboard/public/workspace-client.js",
-      "sha256": "db8cca0b35983b5e0548cb685003f5cdf42ca13eb3ae70ff8d4661cd8ccaf69c"
+      "sha256": "16a1588b33ff4b42688de5218d357590c904bc3c70b38c57e34a83772ca3ac46"
     },
     {
       "mode": "100644",
@@ -138,6 +138,11 @@
     },
     {
       "mode": "100644",
+      "path": "test/discovery.test.mjs",
+      "sha256": "ba53021940b523775e245a69df32a91eb466c5a039ec234d191e8d88a6e5cde4"
+    },
+    {
+      "mode": "100644",
       "path": "test/registration.integration.mjs",
       "sha256": "f3338a258c851947ea711a59513a9d98f345930784843ad71e25acda2c9f63b7"
     },
@@ -179,5 +184,5 @@
   ],
   "historyPolicy": "fresh public snapshot; no private ancestry or source author metadata",
   "schema": 1,
-  "sourceSHA": "12d0458174a0e04345a7ecd221ccd945d246ba58"
+  "sourceSHA": "c5a34ff2c2f74ad108d7a6998c4387787cdf6852"
 }
