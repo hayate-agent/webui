@@ -19,3 +19,5 @@ body>aside>section button{display:block;width:100%;max-width:100%;min-width:0;ma
   body>aside>*{flex-shrink:0}
   body>aside>nav{flex:0 0 auto}
 }
+
+.workspace-agent-header{display:flex;align-items:center;gap:4px}.workspace-agent-header .workspace-agent-heading{flex:1;min-width:0;overflow-wrap:anywhere}.workspace-agent-header>button:not(.workspace-agent-heading){flex:none;padding:4px 8px}

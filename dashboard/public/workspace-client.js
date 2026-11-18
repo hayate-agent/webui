@@ -23,6 +23,17 @@ export async function mountWorkspace({ request, notice, markdown }) {
   let agentRoster = [], navigationRevision = 0, peerState, sending = false, management = false;
   const newest = (a, b) => (b.updatedAt ?? b.createdAt ?? 0) - (a.updatedAt ?? a.createdAt ?? 0) || a.id.localeCompare(b.id);
   const remoteProjects = new Map(), agentSnapshots = new Map();
+  const visibilityKey = 'workspace.hidden-agents';
+  let hiddenAgents = new Set();
+  try { const saved = JSON.parse(localStorage.getItem(visibilityKey) ?? '[]'); if (Array.isArray(saved)) hiddenAgents = new Set(saved.filter(id => typeof id === 'string')); } catch { /* Invalid preferences must not prevent loading chats. */ }
+  function setAgentHidden(id, hidden) {
+    const next = new Set(hiddenAgents); if (hidden) next.add(id); else next.delete(id);
+    try { localStorage.setItem(visibilityKey, JSON.stringify([...next])); } catch { notice('Sidebar preference could not be saved; it will apply until reload.'); }
+    hiddenAgents = next; renderTree();
+  }
+  async function newAgentChat(id) {
+    agentPicker.value = id; await agentPicker.onchange(); input.focus();
+  }
   const peerRequest = (agentId, capability, input) => request(`/api/workspace/agents/${agentId}/request`, { capability, input });
   const panel = node('section', undefined, 'workspace-screen'); panel.hidden = true;
   const heading = node('header'); const headingText = node('h1', 'New chat');
@@ -113,14 +124,25 @@ export async function mountWorkspace({ request, notice, markdown }) {
     const fragment = document.createDocumentFragment();
     if (capabilities['project-creation'] !== false) fragment.append(button('＋ New project', () => projectDialog()));
     if (capabilities['agent-hub'] === 1) fragment.append(button('Agents', agentsDialog));
-    if (capabilities['local-agent'] !== false) fragment.append(renderAgentTree(state, undefined, state.agent));
-    for (const agent of agentRoster) fragment.append(renderAgentTree(agentSnapshots.get(agent.id) ?? { projects: [], streams: [] }, agent.id, agent.name));
+    if (hiddenAgents.size) fragment.append(button('Hidden agents…', () => dialog('Sidebar visibility', d => {
+      const agents = [...(capabilities['local-agent'] !== false ? [{ id: 'local', name: state.agent }] : []), ...agentRoster];
+      for (const agent of agents.filter(agent => hiddenAgents.has(agent.id))) d.append(button(`Show ${agent.name}`, () => { setAgentHidden(agent.id, false); d.close(); }));
+    })));
+    if (capabilities['local-agent'] !== false && !hiddenAgents.has('local')) fragment.append(renderAgentTree(state, undefined, state.agent));
+    for (const agent of agentRoster.filter(agent => !hiddenAgents.has(agent.id))) fragment.append(renderAgentTree(agentSnapshots.get(agent.id) ?? { projects: [], streams: [] }, agent.id, agent.name));
     tree.replaceChildren(fragment);
   }
   function renderAgentTree(source, agentId, name) {
     const fragment = node('section', undefined, 'workspace-agent-group'); fragment.dataset.agentId = agentId ?? 'local';
     const choose = () => { agentPicker.value = agentId ?? 'local'; agentPicker.onchange(); };
-    const label = button(name, choose); label.className = 'workspace-agent-heading'; fragment.append(label);
+    const header = node('div', undefined, 'workspace-agent-header');
+    const label = button(name, choose); label.className = 'workspace-agent-heading';
+    const add = button('+', () => newAgentChat(agentId ?? 'local')); add.setAttribute('aria-label', `New chat with ${name}`); add.title = `New chat with ${name}`;
+    const more = button('⋮', event => popup(event, [
+      ['New chat', () => newAgentChat(agentId ?? 'local')],
+      ['Hide agent from sidebar', () => setAgentHidden(agentId ?? 'local', true)],
+    ])); more.setAttribute('aria-label', `Settings for agent ${name}`);
+    header.append(label, add, more); fragment.append(header);
     if (source.unavailable) fragment.append(node('p', 'Unavailable', 'workspace-context'));
     if (source.incomplete) fragment.append(node('p', 'Partial discovery: some projects or conversations could not be loaded.', 'workspace-context'));
     const projects = source.projects.filter(p => !p.deleted && !p.archived && !(p.importSource === 'webui' && p.title === 'Existing chats' && !p.parentId && !Object.keys(p.settings ?? {}).length && !source.projects.some(child => child.parentId === p.id)));
@@ -421,10 +443,27 @@ export async function mountWorkspace({ request, notice, markdown }) {
     }]);
     popup(event, items);
   }
+  const forkAttempts = new Map();
+  async function forkChat(stream, agentId) {
+    const key = `${agentId ?? 'local'}:${stream.id}`;
+    const idempotencyKey = forkAttempts.get(key) ?? crypto.randomUUID();
+    forkAttempts.set(key, idempotencyKey);
+    const fork = agentId
+      ? await peerRequest(agentId, 'streams', { action: 'fork', streamId: stream.id, idempotencyKey })
+      : await request(`/api/workspace/streams/${stream.id}/fork`, { idempotencyKey });
+    forkAttempts.delete(key);
+    if (agentId) { await showAgentStreams(agentId); await selectRemote(agentId, fork.id); }
+    else { await refresh(); await selectStream(fork.id); }
+  }
   function streamMenu(stream, event) {
     popup(event, [
       ['Settings', () => settingsDialog('stream', stream)],
       ['Details', () => conversationDetails(stream, state.agent)],
+      ['Rename chat', () => formDialog('Rename chat', (form, d) => {
+        const name = document.createElement('input'); name.value = stream.title; name.required = true; name.maxLength = 160; name.setAttribute('aria-label', 'Chat name'); form.append(name);
+        return async () => { await change('streams', stream.id, { title: name.value.trim() }); d.close(); };
+      })],
+      ['Fork chat', () => forkChat(stream)],
       ['Move to project…', () => popup(event, state.projects.filter(p => !p.deleted && !p.archived && p.importSource !== 'webui').map(p => [p.title, () => change('streams', stream.id, { projectId: p.id })]))],
       ['Remove from project', () => change('streams', stream.id, { projectId: null })],
       ['Convert to project', async () => { const p = await request(`/api/workspace/streams/${stream.id}/convert`, {}); await refresh(); await selectProject(p.id); }],
@@ -450,6 +489,11 @@ export async function mountWorkspace({ request, notice, markdown }) {
       }],
       ['Refresh chats', () => showAgentStreams(agentId)],
     ];
+    if (agent?.features?.includes('fork-streams')) items.push(['Fork chat', () => forkChat(stream, agentId)]);
+    if (agent?.features?.includes('rename-streams')) items.push(['Rename chat', () => formDialog('Rename chat', (form, d) => {
+      const name = document.createElement('input'); name.value = stream.title; name.required = true; name.maxLength = 160; name.setAttribute('aria-label', 'Chat name'); form.append(name);
+      return async () => { await peerRequest(agentId, 'streams', { action: 'rename', streamId: stream.id, title: name.value.trim() }); d.close(); await showAgentStreams(agentId); };
+    })]);
     if (agent?.features?.includes('organize-streams')) {
       for (const project of source.projects.filter(p => !p.deleted && !p.archived && p.id !== stream.projectId)) items.push([`Move to ${project.title}`, () => move(project.id)]);
       if (stream.projectId && agent.features.includes('standalone-chats')) items.push(['Remove from project', () => move(null)]);

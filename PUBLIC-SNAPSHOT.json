@@ -1,5 +1,5 @@
 {
-  "contentDigest": "42ac84ccf96bc7288b8410f3a4c11a741996406402210437445b4637dbcc669b",
+  "contentDigest": "1feb6d70743b1be7a8065e4c2b909c94bb84e862c0520d6fa433177caf646824",
   "files": [
     {
       "mode": "100644",
@@ -34,7 +34,7 @@
     {
       "mode": "100644",
       "path": "PUBLIC-SOURCE.json",
-      "sha256": "21146a1be325e0482d6f67d139c5d20bab79ce45d962ec05fc822db0bc6ce20c"
+      "sha256": "d29d1966171fd54cec8cea500355d0683e7d965158507e13c30db53920e3f6e3"
     },
     {
       "mode": "100644",
@@ -64,12 +64,12 @@
     {
       "mode": "100644",
       "path": "dashboard/public/style.css",
-      "sha256": "a20487ecc91e763eec881ce6159bac43bb4315a4b1e0c92dea1dad779dd085ea"
+      "sha256": "d0d82383a57739b81f2528c23b31aed24ba3827783c2769e92ed332bd941e022"
     },
     {
       "mode": "100644",
       "path": "dashboard/public/workspace-client.js",
-      "sha256": "16a1588b33ff4b42688de5218d357590c904bc3c70b38c57e34a83772ca3ac46"
+      "sha256": "01aaddb318336d3997b46c258475ab12aca2e8152731513f914dc32ece0b1ef1"
     },
     {
       "mode": "100644",
@@ -174,7 +174,7 @@
     {
       "mode": "100644",
       "path": "test/unified.browser.mjs",
-      "sha256": "f202dfe6f45535860e6292fc985c0c5b3a976706085e068aeb56f913c39b1e64"
+      "sha256": "5912f3753ea04a8fb7e031ffd920903facf928a498ad492a13560a2bd4b4daa8"
     },
     {
       "mode": "100644",
@@ -184,5 +184,5 @@
   ],
   "historyPolicy": "fresh public snapshot; no private ancestry or source author metadata",
   "schema": 1,
-  "sourceSHA": "c5a34ff2c2f74ad108d7a6998c4387787cdf6852"
+  "sourceSHA": "802a063733a9b4c634e4676dddb68d206deaf03b"
 }
