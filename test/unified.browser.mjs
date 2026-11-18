@@ -27,12 +27,16 @@ const backend = createServer(async (req, res) => {
     if (capability === 'projects') return json({ projects: peer.projects });
     if (capability === 'streams' && action.action === 'list') return json(peer);
     if (capability === 'streams' && action.action === 'create') { const chat = { id: 'remote-created', projectId: action.projectId, title: action.title, updatedAt: 100, messages: [], cwd: '/remote' }; peer.streams.push(chat); return json(chat); }
+    if (capability === 'streams' && action.action === 'rename') { const chat = peer.streams.find(s => s.id === action.streamId); chat.title = action.title; return json(chat); }
+    if (capability === 'streams' && action.action === 'fork') { const source = peer.streams.find(s => s.id === action.streamId); const fork = { ...structuredClone(source), id: 'peer-fork', title: `${source.title} (fork)` }; peer.streams.push(fork); return json(fork); }
     if (capability === 'streams' && action.action === 'move') { peer.streams.find(s => s.id === action.streamId).projectId = action.projectId; return json({ moved: true }); }
     if (capability === 'messages' && action.action === 'read') return json(peer.streams.find(s => s.id === action.streamId));
     if (capability === 'messages' && action.action === 'send') { peer.streams.find(s => s.id === action.streamId).messages.push({ role: 'user', text: action.text }); return json({ accepted: true }); }
     return json({ read: true });
   }
   if (req.url === '/api/workspace/streams' && req.method === 'POST') { const chat = { ...input, id: 'created', cwd: '/work', messages: [], updatedAt: 100 }; state.streams.push(chat); return json(chat); }
+  const forkMatch = /^\/api\/workspace\/streams\/([^/]+)\/fork$/.exec(req.url);
+  if (forkMatch && req.method === 'POST') { const source = state.streams.find(s => s.id === forkMatch[1]); const fork = { ...structuredClone(source), id: 'local-fork', title: `${source.title} (fork)` }; state.streams.push(fork); return json(fork); }
   const match = /^\/api\/workspace\/streams\/([^/]+)(\/messages)?$/.exec(req.url);
   if (match) {
     const chat = state.streams.find(s => s.id === match[1]);
@@ -71,6 +75,41 @@ try {
   await page.getByRole('menuitem', { name: 'Settings', exact: true }).waitFor(); await page.keyboard.press('ArrowDown');
   assert.equal(await page.evaluate(() => document.activeElement.textContent), 'Details');
   await page.keyboard.press('Escape'); assert.equal(await page.getByRole('menu').count(), 0);
+  await page.getByLabel('Settings for Newest standalone', { exact: true }).click();
+  await page.getByRole('menuitem', { name: 'Rename chat', exact: true }).click();
+  await page.getByLabel('Chat name', { exact: true }).fill('Renamed standalone');
+  await page.getByRole('button', { name: 'Save', exact: true }).click();
+  await page.getByRole('button', { name: 'Renamed standalone', exact: true }).waitFor();
+  assert.equal(state.streams.find(s => s.id === 'solo-new').title, 'Renamed standalone');
+  await page.getByLabel('Settings for Renamed standalone', { exact: true }).click();
+  await page.getByRole('menuitem', { name: 'Rename chat', exact: true }).click();
+  await page.getByLabel('Chat name', { exact: true }).fill('Newest standalone');
+  await page.getByRole('button', { name: 'Save', exact: true }).click();
+  // Exercise the delivered client against the fork contract. Service-level tests
+  // separately verify persistence, runtime context and idempotency.
+  state.streams.find(s => s.id === 'solo-new').messages.push({ role: 'user', text: 'Remember the local context' });
+  await page.getByLabel('Settings for Newest standalone', { exact: true }).click();
+  await page.getByRole('menuitem', { name: 'Fork chat', exact: true }).click();
+  await page.waitForFunction(() => document.querySelector('.workspace-screen h1')?.textContent === 'Newest standalone (fork)');
+  assert.ok((await page.locator('.workspace-content').innerText()).includes('Remember the local context'));
+  await page.getByLabel('Next project step').fill('Local fork only');
+  await page.getByRole('button', { name: 'Send ↑', exact: true }).click();
+  await page.waitForFunction(() => [...document.querySelectorAll('.workspace-content article')].some(e => e.textContent === 'Local fork only'));
+  assert.equal(state.streams.find(s => s.id === 'solo-new').messages.length, 1);
+  assert.equal(state.streams.find(s => s.id === 'local-fork').messages.length, 2);
+  const localForkCall = calls.find(c => c.url === '/api/workspace/streams/solo-new/fork');
+  assert.ok(localForkCall.input.idempotencyKey);
+  await page.getByLabel('Settings for agent Che', { exact: true }).click();
+  await page.getByRole('menuitem', { name: 'Hide agent from sidebar', exact: true }).click();
+  assert.equal(await page.locator('.workspace-agent-group[data-agent-id="che"]').count(), 0);
+  await page.reload();
+  await page.getByRole('button', { name: 'Hidden agents…', exact: true }).waitFor();
+  assert.equal(await page.locator('.workspace-agent-group[data-agent-id="che"]').count(), 0);
+  await page.getByRole('button', { name: 'Hidden agents…', exact: true }).click();
+  await page.getByRole('button', { name: 'Show Che', exact: true }).click();
+  await page.getByLabel('New chat with Che', { exact: true }).click();
+  assert.equal(await page.getByLabel('Active agent', { exact: true }).inputValue(), 'che');
+  assert.equal(await page.getByLabel('Chat project', { exact: true }).inputValue(), '');
   await page.getByRole('button', { name: '＋ New chat', exact: true }).click(); await page.getByLabel('Next project step').fill('Standalone created without choosing a project'); await page.getByRole('button', { name: 'Send ↑', exact: true }).click();
   await page.waitForFunction(() => document.querySelector('.standalone-chats [data-stream-id="created"]'));
   assert.equal(state.streams.find(s => s.id === 'created').projectId, null);
@@ -93,8 +132,26 @@ try {
   await page.getByRole('button', { name: '＋ New chat', exact: true }).click(); await page.getByLabel('Active agent', { exact: true }).selectOption('che'); await page.getByLabel('Next project step').fill('New remote conversation'); await page.getByRole('button', { name: 'Send ↑', exact: true }).click();
   await page.getByRole('button', { name: 'New remote conversation', exact: true }).waitFor();
   assert.equal(peer.streams.at(-1).messages[0].text, 'New remote conversation');
+  peer.features.push('rename-streams', 'fork-streams');
+  await page.getByRole('button', { name: 'Che', exact: true }).click();
+  await page.getByLabel('Settings for Remote conversation', { exact: true }).click();
+  await page.getByRole('menuitem', { name: 'Rename chat', exact: true }).click();
+  await page.getByLabel('Chat name', { exact: true }).fill('Remote renamed');
+  await page.getByRole('button', { name: 'Save', exact: true }).click();
+  await page.getByRole('button', { name: 'Remote renamed', exact: true }).waitFor();
+  assert.equal(peer.streams[0].title, 'Remote renamed');
+  await page.getByLabel('Settings for Remote renamed', { exact: true }).click();
+  await page.getByRole('menuitem', { name: 'Fork chat', exact: true }).click();
+  await page.waitForFunction(() => document.querySelector('.workspace-screen h1')?.textContent === 'Remote renamed (fork)');
+  assert.ok((await page.locator('.workspace-content').innerText()).includes('Send only to Che'));
+  await page.getByLabel('Next project step').fill('Remote fork only');
+  await page.getByRole('button', { name: 'Send ↑', exact: true }).click();
+  await page.waitForFunction(() => [...document.querySelectorAll('.workspace-content article')].some(e => e.textContent === 'Remote fork only'));
+  assert.equal(peer.streams[0].messages.length, 1);
+  assert.equal(peer.streams.find(s => s.id === 'peer-fork').messages.length, 2);
+  assert.ok(calls.find(c => c.input?.input?.action === 'fork').input.input.idempotencyKey);
   await page.getByRole('button', { name: 'Primary Agent', exact: true }).click(); await page.getByRole('button', { name: 'Newest standalone', exact: true }).waitFor();
-  await page.getByLabel('Find a conversation').fill('Newest standalone'); assert.deepEqual(await rows('[data-agent-id="local"] .standalone-chats'), ['Newest standalone']);
+  await page.getByLabel('Find a conversation').fill('Newest standalone'); assert.deepEqual(await rows('[data-agent-id="local"] .standalone-chats'), ['Newest standalone (fork)', 'Newest standalone']);
   await page.getByLabel('Find a conversation').fill('');
   for (const client of eventClients) client.write(`data: ${JSON.stringify(state)}\n\n`);
   assert.equal(await page.locator('aside select').count(), 0);
@@ -103,5 +160,5 @@ try {
   await page.setViewportSize({ width: 390, height: 844 });
   assert.ok(await page.getByRole('button', { name: 'Che', exact: true }).isVisible());
   assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
-  console.log('Unified conversations: all agents/projects visible, main-area recipient/project selectors, no mode split, recent ordering, move/unassign, standalone creation, remote selection/send/create, search, SSE and mobile passed.');
+  console.log('Unified conversations: all agents/projects visible, main-area recipient/project selectors, no mode split, recent ordering, move/unassign, standalone creation, remote selection/send/create, local/remote rename and context-preserving fork isolation, search, SSE and mobile passed.');
 } finally { await browser.close(); await dashboard.stop(); backend.closeAllConnections(); await new Promise(resolve => backend.close(resolve)); }
