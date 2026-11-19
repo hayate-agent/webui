@@ -1,0 +1,32 @@
+@layer legacy, theme, base, components, utilities;
+@import 'tailwindcss/theme.css' layer(theme);
+@import 'tailwindcss/utilities.css' layer(utilities);
+@source './ui';
+@theme inline {
+ --color-primary: var(--accent);
+ --color-primary-foreground: var(--bg);
+ --color-background: var(--bg);
+ --color-foreground: var(--text);
+ --color-secondary: var(--panel);
+ --color-secondary-foreground: var(--text);
+ --color-accent: var(--user);
+ --color-accent-foreground: var(--text);
+ --color-input: var(--line);
+ --color-ring: var(--accent);
+ --color-destructive: var(--danger);
+ --color-destructive-foreground: var(--bg);
+ --color-surface: var(--panel);
+ --color-line: var(--line);
+ --color-ink: var(--text);
+ --color-ink-2: var(--muted);
+ --color-ink-3: var(--muted);
+ --color-hover: var(--user);
+ --color-green: var(--accent);
+ --color-red: var(--danger);
+ --radius-card: 14px;
+ --shadow-card: 0 0 0 1px var(--line);
+}
+.bui-code-block { --ink: var(--text); --accent-ink: var(--accent); --orange: var(--muted); --green: var(--accent); --red: var(--danger); margin:18px 0; }
+.bui-code-block>div { max-width:none; }
+.bui-code-block code { background:transparent;padding:0;font-size:12px; }
+.bui-code-block button { border:0;padding:4px 8px; }

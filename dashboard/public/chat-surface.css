@@ -1,0 +1,60 @@
+/* Main conversation surface. Applied after legacy and component styles. */
+body .workspace-screen>header{display:flex!important;flex-wrap:wrap;align-items:center;justify-content:space-between}
+.chat-heading-identity{flex:1 1 180px;min-width:0;max-width:100%}
+body .chat-heading-identity h1{margin:0;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+body .chat-heading-identity .workspace-context{margin:5px 0 0;font-size:11px;color:var(--muted)}
+.chat-heading-controls{display:flex;align-items:center;justify-content:flex-end;gap:8px;flex:0 1 auto;min-width:0;max-width:100%}
+body .chat-heading-controls .agent-picker{width:150px;max-width:150px;flex:0 1 150px;min-width:0}
+body .chat-heading-controls select{width:100%;max-width:150px}
+body .chat-heading-controls>button{flex:0 0 32px;width:32px;padding:4px}
+@media(max-width:760px){.chat-heading-controls{width:100%;justify-content:flex-start}.chat-heading-identity{flex-basis:100%}body .chat-heading-controls .agent-picker{flex:1 1 0;width:0;max-width:none}body .chat-heading-controls select{max-width:100%}}
+
+body .workspace-screen{background:var(--panel);padding:0;gap:0}
+body .workspace-screen>header{background:var(--bg);padding:16px 24px;border-bottom:1px solid var(--line);gap:10px;grid-template-columns:minmax(0,1fr) minmax(110px,170px) minmax(110px,170px) 36px;align-items:center}
+body .workspace-screen>header .agent-picker{width:100%;max-width:170px;justify-self:end}
+body .workspace-screen>header .agent-picker select{width:100%;max-width:170px;min-width:0;text-overflow:ellipsis;padding:5px 8px;font-size:12px}
+body .workspace-screen>header>button{width:36px;max-width:36px;padding:4px;justify-self:end}
+body .workspace-tree .workspace-stream-row{display:grid;grid-template-columns:minmax(0,1fr) 32px;align-items:start;margin-left:4px}
+body .workspace-tree .workspace-stream-row>button:first-child{display:-webkit-box;width:100%;min-width:0;white-space:normal;overflow-wrap:anywhere;line-height:1.45;-webkit-line-clamp:3;-webkit-box-orient:vertical;padding:8px 10px;text-align:left}
+body .workspace-tree .workspace-agent-heading{white-space:normal;overflow-wrap:anywhere;text-align:left;line-height:1.4}
+body .workspace-tree summary>button:first-child{-webkit-line-clamp:3;white-space:normal}
+body .workspace-tree .workspace-stream-row>button:last-child{align-self:start;margin-top:4px}
+body .workspace-screen>header h1{font-size:20px}
+body .workspace-screen>.workspace-error:not([hidden]){margin:12px 24px;padding:12px 16px;border:1px solid var(--danger);border-radius:12px;background:var(--bg)}
+body .workspace-content{padding:32px max(24px,calc((100% - 800px)/2));background:var(--panel)}
+body .workspace-content .body h2{padding-bottom:8px;border-bottom:1px solid var(--line)}
+body .workspace-content .body a{text-underline-offset:3px}
+body .workspace-content .body li p{margin:4px 0}
+body .workspace-content .bui-code-block>div{border-radius:12px;background:var(--panel)}
+body .ui-composer-host{background:var(--panel);width:100%;max-width:none;padding:12px max(24px,calc((100% - 800px)/2)) 24px}
+body .workspace-screen .bui-composer{background:var(--bg);border:1px solid var(--line);border-radius:20px;padding:16px 18px;margin:0;box-shadow:0 6px 24px #00000008}
+.bui-composer-caption{display:flex;justify-content:space-between;gap:12px;font-size:10px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);padding-bottom:10px}
+.bui-composer-caption span:last-child{font-weight:400;letter-spacing:0;text-transform:none}
+body .bui-composer textarea{min-height:76px;padding:4px 0;font-size:15px}
+body .bui-composer .ui-composer-toolbar{border-top:1px solid var(--line);padding-top:12px;margin-top:8px}
+body .bui-composer button[type=submit]{height:36px;min-width:102px;border-radius:10px;gap:10px}
+body .bui-composer .ui-composer-hint{font-size:10px}
+@media(min-width:1200px){}
+@media(max-width:760px){body .workspace-screen>header{padding:12px 16px;grid-template-columns:minmax(0,1fr) 36px}body .workspace-screen>header .agent-picker{justify-self:start;max-width:100%;grid-column:1;grid-row:auto}body .workspace-screen>header .agent-picker:nth-of-type(2){grid-column:2;min-width:0}body .workspace-screen>header{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}body .workspace-screen>header>button{grid-column:2;grid-row:1}body .workspace-screen>header .agent-picker select{max-width:100%}body .workspace-screen>header h1{font-size:18px}body .workspace-content{padding:20px 12px}body .ui-composer-host{padding:8px 12px 12px}body .workspace-screen .bui-composer{padding:12px 14px;border-radius:16px}body .bui-composer textarea{min-height:58px}body .bui-composer button[type=submit]{min-width:86px}.bui-composer-caption{font-size:9px}}
+/* Transcript in the style of PI's TUI: flowing assistant text, tinted user block, compact tool lines. */
+body .workspace-content .ui-chat-message{border:0;background:none;box-shadow:none;border-radius:0;padding:0;margin:0 0 14px;max-width:none;line-height:1.65;font-size:14.5px}
+body .workspace-content .ui-chat-message.user{background:var(--user);border-radius:6px;padding:8px 14px;margin:18px 0 14px}
+body .workspace-content .ui-chat-message.user p{margin:0;white-space:pre-wrap}
+body .workspace-content .ui-chat-message.assistant{padding:0 2px}
+body .workspace-content .ui-chat-message.toolResult{margin:-8px 0 14px}
+body .workspace-content .ui-message-disclosure{border:0;border-left:2px solid var(--line);border-radius:0;background:none;margin:6px 0;overflow:visible}
+body .workspace-content .ui-message-disclosure.failed{border-left-color:var(--danger)}
+body .workspace-content .ui-message-disclosure summary{display:flex;align-items:baseline;gap:8px;padding:2px 0 2px 10px;background:none;font:12.5px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--text);cursor:pointer;list-style:none;min-width:0}
+body .workspace-content .ui-message-disclosure summary::-webkit-details-marker{display:none}
+body .workspace-content .ui-message-disclosure.thinking summary{color:var(--muted);font-style:italic}
+body .workspace-content .ui-message-disclosure.failed summary{color:var(--danger)}
+.ui-disclosure-indicator{flex:none;width:1.2em;text-align:center;color:var(--accent)}
+.ui-message-disclosure.failed .ui-disclosure-indicator{color:var(--danger)}
+.ui-disclosure-label{flex:none;font-weight:600}
+.ui-disclosure-hint::before{content:attr(data-text)}
+.ui-disclosure-hint{flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--muted)}
+.ui-message-disclosure[open] .ui-disclosure-hint{display:none}
+body .workspace-content .ui-message-disclosure pre{margin:4px 0 6px 12px;padding:8px 12px;max-height:360px;overflow:auto;white-space:pre-wrap;overflow-wrap:anywhere;font:12px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace;background:var(--panel);border:0;border-radius:4px;color:var(--muted)}
+.ui-message-disclosure.failed pre{color:var(--danger)}
+body .workspace-content .ui-chat-message.assistant .body{margin:0}
+@media(max-width:760px){body .workspace-content .ui-chat-message{font-size:14px}body .workspace-content .ui-message-disclosure summary{flex-wrap:wrap}.ui-disclosure-hint{flex-basis:100%}}

@@ -14,16 +14,20 @@ const loopback = host => ['127.0.0.1', '[::1]', 'localhost'].includes(host);
 
 /** Standalone presentation process. All projects, work and credentials remain on
  * the configured agent API. No Core imports, secret vault or agent runtime. */
-export async function createDashboard({ origin, upstream, host = '127.0.0.1', port, tls, upstreamServername, upstreamOrigin, ca, assets = assetRoot }) {
+export async function createDashboard({ origin, upstream, piUpstream, host = '127.0.0.1', port, tls, upstreamServername, upstreamOrigin, ca, assets = assetRoot }) {
   const publicURL = canonical(origin), backend = canonical(upstream);
   const apiOrigin = canonical(upstreamOrigin ?? upstream);
+  const piBackend = piUpstream ? canonical(piUpstream) : undefined;
+  // Local PI control is deliberately unavailable on network-facing dashboards
+  // until a shared authorization boundary is implemented.
+  if (piBackend && (!loopback(host) || !loopback(publicURL.hostname) || piBackend.protocol !== 'http:' || piBackend.hostname !== '127.0.0.1')) throw Error('PI adapter requires a loopback-only dashboard and adapter');
   if (publicURL.protocol === 'https:' && !tls || publicURL.protocol === 'http:' && (!loopback(host) || !loopback(publicURL.hostname))) throw Error('Network dashboard requires TLS');
   if (backend.protocol !== 'https:' && !loopback(backend.hostname)) throw Error('Remote backend requires HTTPS');
   const sockets = new Set(), requests = new Set(); let closing = false;
   const handle = async (req, res) => {
     res.setHeader('Cache-Control', 'no-store'); res.setHeader('X-Content-Type-Options', 'nosniff');
     res.setHeader('Referrer-Policy', 'no-referrer'); res.setHeader('X-Frame-Options', 'DENY');
-    res.setHeader('Content-Security-Policy', "default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self'; img-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'");
+    res.setHeader('Content-Security-Policy', "default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self'; img-src 'self' blob:; base-uri 'none'; frame-ancestors 'none'; form-action 'self'");
     const refuse = status => { res.writeHead(status); res.end(); };
     if (closing) return refuse(503);
     if (req.headers.host !== publicURL.host) return refuse(403);
@@ -31,18 +35,24 @@ export async function createDashboard({ origin, upstream, host = '127.0.0.1', po
     if (req.headers['sec-fetch-site'] && !['same-origin', 'none'].includes(req.headers['sec-fetch-site'])) return refuse(403);
     const url = new URL(req.url, publicURL);
     if (url.pathname.startsWith('/api/')) {
-      if (!['GET', 'POST', 'DELETE'].includes(req.method)) return refuse(405);
+      if (!['GET', 'HEAD', 'POST', 'DELETE'].includes(req.method)) return refuse(405);
       const machine = req.method === 'POST' && ['/api/agent-link/v1/enroll', '/api/agent-link/v1/leave'].includes(url.pathname)
         && !req.headers.origin && !req.headers.cookie && !req.headers['sec-fetch-site'];
-      if (req.method !== 'GET' && !machine && (req.headers.origin !== publicURL.origin || req.headers['x-hayate-webui'] !== '1')) return refuse(403);
-      const headers = { host: apiOrigin.host };
-      for (const name of ['content-type', 'content-length', 'cookie', 'origin', 'x-hayate-webui', 'sec-fetch-site', 'last-event-id']) if (req.headers[name]) headers[name] = req.headers[name];
+      if (!['GET', 'HEAD'].includes(req.method) && !machine && (req.headers.origin !== publicURL.origin || req.headers['x-hayate-webui'] !== '1')) return refuse(403);
+      const isPi = url.pathname.startsWith('/api/pi/');
+      if (isPi && !piBackend) return refuse(404);
+      const target = isPi ? piBackend : backend;
+      const targetOrigin = isPi ? piBackend : apiOrigin;
+      const headers = { host: targetOrigin.host };
+      for (const name of ['content-type', 'content-length', 'cookie', 'origin', 'x-hayate-webui', 'sec-fetch-site', 'last-event-id', 'if-none-match']) if (req.headers[name]) headers[name] = req.headers[name];
       if (machine && req.headers.authorization) headers.authorization = req.headers.authorization;
-      if (headers.origin) headers.origin = apiOrigin.origin;
-      const request = backend.protocol === 'https:' ? httpsRequest : httpRequest;
-      const remote = request(new URL(url.pathname + url.search, backend), { method: req.method, headers, agent: false, ca, servername: upstreamServername ?? apiOrigin.hostname }, response => {
+      if (headers.origin) headers.origin = targetOrigin.origin;
+      if (isPi) delete headers.cookie;
+      const request = target.protocol === 'https:' ? httpsRequest : httpRequest;
+      if (req.headers['if-none-match']) headers['if-none-match'] = req.headers['if-none-match'];
+      const remote = request(new URL(url.pathname + url.search, target), { method: req.method, headers, agent: false, ca: isPi ? undefined : ca, servername: isPi ? undefined : upstreamServername ?? apiOrigin.hostname }, response => {
         if (response.headers['content-type']?.startsWith('text/event-stream')) remote.setTimeout(0);
-        for (const name of ['content-type', 'cache-control', 'set-cookie']) if (response.headers[name]) res.setHeader(name, response.headers[name]);
+        for (const name of ['content-type', 'cache-control', 'set-cookie', 'etag', 'vary', 'clear-site-data']) if (response.headers[name]) res.setHeader(name, response.headers[name]);
         res.writeHead(response.statusCode); response.on('error', () => res.destroy()); response.pipe(res);
       });
       requests.add(remote); remote.once('close', () => requests.delete(remote));
@@ -52,7 +62,7 @@ export async function createDashboard({ origin, upstream, host = '127.0.0.1', po
       req.pipe(remote); return;
     }
     if (req.method !== 'GET') return refuse(405);
-    const file = { '/': ['index.html', 'text/html'], '/app.js': ['app.js', 'text/javascript'], '/style.css': ['style.css', 'text/css'] }[url.pathname];
+    const file = { '/': ['index.html', 'text/html'], '/app.js': ['app.js', 'text/javascript'], '/style.css': ['style.css', 'text/css'], '/workspace-polish.css': ['workspace-polish.css', 'text/css'], '/chat-output.css': ['chat-output.css', 'text/css'], '/components.css': ['components.css', 'text/css'], '/chat-surface.css': ['chat-surface.css', 'text/css'], '/mobile.css': ['mobile.css', 'text/css'] }[url.pathname];
     if (!file) return refuse(404);
     try { const bytes = await readFile(path.join(assets, file[0])); res.writeHead(200, { 'Content-Type': `${file[1]}; charset=utf-8` }); res.end(bytes); }
     catch { refuse(503); }
@@ -61,6 +71,28 @@ export async function createDashboard({ origin, upstream, host = '127.0.0.1', po
   server.requestTimeout = 15000; server.headersTimeout = 10000;
   let upgrades = 0;
   server.on('upgrade', (req, socket, head) => {
+    if (req.url === '/api/workspace/live') {
+      if (closing || upgrades >= 32 || req.method !== 'GET' || req.headers.host !== publicURL.host || req.headers.origin !== publicURL.origin || req.headers['sec-websocket-protocol'] !== 'hayate.workspace.v1') { socket.destroy(); return; }
+      upgrades++;
+      const browserHeaders = { host: apiOrigin.host, origin: apiOrigin.origin, cookie: req.headers.cookie ?? '', connection: 'Upgrade', upgrade: 'websocket' };
+      for (const name of ['sec-websocket-key', 'sec-websocket-version', 'sec-websocket-protocol']) browserHeaders[name] = req.headers[name];
+      const remote = (backend.protocol === 'https:' ? httpsRequest : httpRequest)(new URL(req.url, backend), { agent: false, ca, servername: upstreamServername ?? apiOrigin.hostname, headers: browserHeaders });
+      requests.add(remote); remote.once('close', () => requests.delete(remote));
+      const timer = setTimeout(() => { remote.destroy(); socket.destroy(); }, 10000);
+      let upstream;
+      remote.on('upgrade', (response, connection, initial) => {
+        clearTimeout(timer); upstream = connection;
+        if (closing || socket.destroyed || response.headers['sec-websocket-protocol'] !== 'hayate.workspace.v1') { connection.destroy(); socket.destroy(); return; }
+        sockets.add(connection); connection.once('close', () => sockets.delete(connection));
+        socket.write('HTTP/1.1 101 Switching Protocols\r\nConnection: Upgrade\r\nUpgrade: websocket\r\nSec-WebSocket-Accept: ' + response.headers['sec-websocket-accept'] + '\r\nSec-WebSocket-Protocol: hayate.workspace.v1\r\n\r\n');
+        if (head.length) connection.write(head); if (initial.length) socket.write(initial);
+        connection.on('error', () => socket.destroy()); socket.on('error', () => connection.destroy()); connection.pipe(socket); socket.pipe(connection);
+      });
+      remote.on('response', response => { response.resume(); socket.end('HTTP/1.1 403 Forbidden\r\nConnection: close\r\n\r\n'); });
+      remote.on('error', () => socket.destroy());
+      socket.once('close', () => { clearTimeout(timer); upgrades--; remote.destroy(); upstream?.destroy(); });
+      remote.end(); return;
+    }
     if (closing || upgrades >= 32 || req.method !== 'GET' || req.url !== '/api/agent-link/v1/connect'
       || req.headers.host !== publicURL.host || req.headers.origin || req.headers.cookie || req.headers['sec-fetch-site']
       || req.headers.upgrade?.toLowerCase() !== 'websocket' || req.headers['sec-websocket-version'] !== '13' || !/^[A-Za-z0-9+/]{22}==$/.test(req.headers['sec-websocket-key'] ?? '')

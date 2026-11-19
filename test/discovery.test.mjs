@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { discoverAgent } from '../dashboard/public/workspace-client.js';
+import { discoverAgent } from '../dashboard/public/agent-discovery.js';
 
 for (const streamsFail of [false, true]) for (const projectsFail of [false, true]) {
   test(`discovery retains successful responses: streamsFail=${streamsFail}, projectsFail=${projectsFail}`, async () => {

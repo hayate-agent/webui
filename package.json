@@ -4,14 +4,43 @@
   "private": true,
   "type": "module",
   "license": "Apache-2.0",
-  "engines": { "node": ">=22.19.0" },
-  "repository": { "type": "git", "url": "https://github.com/hayate-agent/webui.git" },
+  "engines": {
+    "node": ">=22.19.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/hayate-agent/webui.git"
+  },
   "scripts": {
     "build": "node scripts/build.mjs",
     "test": "node --test test/*.test.mjs",
-    "test:browser": "node test/browser.mjs && node test/unified.browser.mjs && node test/sidebar.browser.mjs",
-    "start": "node server/main.mjs"
+    "test:browser": "node test/browser.mjs && node test/unified.browser.mjs && node test/sidebar.browser.mjs && node test/pi.browser.mjs && node test/pi-main-chat.browser.mjs && node test/history-viewport.browser.mjs && node test/history-scroll-stability.browser.mjs && node test/navigation-cache.browser.mjs && node test/live-browser.mjs && node test/media-drafts.browser.mjs && node test/mobile-layout.browser.mjs && node test/command-browser.mjs",
+    "start": "node server/main.mjs",
+    "start:local": "node scripts/start-local.mjs",
+    "pi:console": "node pi-adapter/console.mjs",
+    "service": "node scripts/webui-service.mjs",
+    "pi:install-connector": "node scripts/install-connector.mjs",
+    "pi:pair": "node scripts/pi-relay-enroll.mjs",
+    "test:central-browser": "PI_WEBUI_CENTRAL_BROWSER_TEST=1 node test/pi.browser.mjs"
   },
-  "dependencies": { "dompurify": "3.4.17", "marked": "18.1.1" },
-  "devDependencies": { "esbuild": "0.25.12", "playwright": "1.65.0" }
+  "dependencies": {
+    "@base-ui/react": "1.9.0",
+    "@radix-ui/react-slot": "1.5.0",
+    "class-variance-authority": "0.7.1",
+    "clsx": "2.1.1",
+    "dompurify": "3.4.17",
+    "marked": "18.1.1",
+    "react": "19.3.1",
+    "react-dom": "19.3.1",
+    "sharp": "0.35.5",
+    "tailwind-merge": "3.7.0",
+    "ws": "^8.23.0"
+  },
+  "devDependencies": {
+    "@tailwindcss/node": "4.3.5",
+    "esbuild": "0.25.12",
+    "playwright": "1.65.0",
+    "tailwindcss": "4.3.5"
+  },
+  "overrides": {}
 }
