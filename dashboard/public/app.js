@@ -1,7 +1,10 @@
+import { mountBeautifulCode } from './ui/beautiful-code.jsx';
 import { marked } from 'marked';
 import DOMPurify from 'dompurify';
 import { mountWorkspace } from './workspace-client.js';
 import { authenticate, checkIdentity } from './auth-client.js';
+import { mountPi } from './pi-client.js';
+import { setupMobileNavigation } from './mobile-nav.js';
 
 const $ = id => document.getElementById(id);
 const view = $('conversation');
@@ -67,9 +70,7 @@ function markdown(text) {
   }
   for (const pre of body.querySelectorAll('pre')) {
     const code = pre.querySelector('code');
-    const label = element('div', code?.className.replace(/^language-/, '') || 'Code', 'code-label');
-    const copyButton = button('Copy', () => copy(code?.textContent ?? pre.textContent, copyButton));
-    label.append(copyButton); pre.before(label);
+    mountBeautifulCode(pre, code?.className.replace(/^language-/, '') || 'Code');
   }
   return body;
 }
@@ -237,11 +238,16 @@ window.addEventListener('beforeunload', () => { listEvents?.close(); chatEvents?
 
 async function init() {
   await authenticate();
+  void mountPi({ request, markdown }).catch(() => { /* Optional PI failure must not block Hayate. */ });
+  // Central PI hosts are normal workspace conversations. Do not mount a
+  // second modal/side-panel client for the same authenticated remote host.
   setInterval(() => { if (!document.hidden) void checkIdentity().catch(() => {}); }, 10000);
   const theme = localStorage.getItem('hayate.webui.theme');
   if (['light', 'dark'].includes(theme)) document.body.dataset.theme = theme;
   try { for (const [id, attempt] of JSON.parse(sessionStorage.getItem('hayate.webui.pending') ?? '[]')) { pending.set(id, attempt); drafts.set(id, attempt.text); } } catch { /* Ignore damaged browser preferences. */ }
   const state = await request('/api/state'); list = state.chats;
+  // Reachable on every path (legacy or workspace): the drawer is the only conversation list on mobile.
+  setupMobileNavigation([document.querySelector('main > header')]);
   if (state.backends?.workspaces === 1 && await mountWorkspace({ request, notice, markdown })) return;
   const previous = sessionStorage.getItem('hayate.webui.chat');
   if (list.length) await select(list.some(c => c.id === previous) ? previous : list[0].id);

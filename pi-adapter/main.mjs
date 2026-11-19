@@ -1,0 +1,10 @@
+import { createPiService } from './service.mjs';
+const directory = process.env.PI_WEBUI_BRIDGE_DIR;
+const roots = process.env.PI_WEBUI_ROOTS?.split('\n').filter(Boolean);
+if (!directory || !roots?.length) throw Error('Set PI_WEBUI_BRIDGE_DIR and newline-separated PI_WEBUI_ROOTS explicitly');
+const sessionRoots = process.env.PI_WEBUI_SESSION_ROOTS?.split('\n').filter(Boolean) ?? [];
+const adapter = await createPiService({ directory, roots, sessionRoots, port: Number(process.env.PI_WEBUI_PORT ?? 3211), executable: process.env.PI_WEBUI_EXECUTABLE ?? 'pi' });
+console.log(`PI adapter listening on http://127.0.0.1:${adapter.server.address().port}`);
+let stopping;
+const stop = () => { stopping ??= adapter.stop().catch(() => { process.exitCode = 1; }); };
+process.once('SIGINT', stop); process.once('SIGTERM', stop);

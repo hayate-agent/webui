@@ -15,7 +15,7 @@ try {
         <aside aria-label="Conversations"><div class="brand">hayate</div><button id="new">＋ New chat</button>
           <input id="search" placeholder="Find a conversation"><nav id="chats" ${workspace ? 'class="workspace-tree"' : ''}><button>Retained Hayate conversation</button></nav>
           <footer>No external services or browser-side keys.</footer><button id="account-settings">Account settings</button><button id="sign-out">Sign out</button>
-          ${[1, 2].map(n => `<section><h2>PI · pi-mac-work-${'long-agent-name-'.repeat(n * 4)}</h2><button>＋ New PI session</button><div>${Array.from({ length: 18 }, (_, i) => `<button>Session ${i} · tui · /Users/karsten/Work/Development/${'unbroken-path-'.repeat(12)}</button>`).join('')}</div></section>`).join('')}
+          ${[1, 2].map(n => `<section><h2>PI · pi-mac-work-${'long-agent-name-'.repeat(n * 4)}</h2><button>＋ New PI session</button><div>${Array.from({ length: 18 }, (_, i) => `<button>Session ${i} · tui · /Users/example/Work/Development/${'unbroken-path-'.repeat(12)}</button>`).join('')}</div></section>`).join('')}
         </aside>
         <main ${workspace ? 'class="workspace-screen"' : ''}><header><h1>New chat</h1></header><section ${workspace ? 'class="workspace-content"' : 'id="conversation"'}>Main conversation remains visible.</section>
         <form ${workspace ? 'class="workspace-composer"' : 'id="composer"'}><textarea aria-label="Message" rows="3"></textarea><button>Send</button></form></main>

@@ -1,0 +1,9 @@
+{
+  "$schema": "https://ui.shadcn.com/schema.json",
+  "style": "new-york",
+  "rsc": false,
+  "tsx": true,
+  "tailwind": { "config": "", "css": "dashboard/public/components.css", "baseColor": "neutral", "cssVariables": true },
+  "aliases": { "components": "@/ui", "utils": "@/lib/utils", "ui": "@/ui/shadcn", "lib": "@/lib", "hooks": "@/hooks" },
+  "registries": { "@beautiful": "https://beautifului.dev/r/{name}.json" }
+}

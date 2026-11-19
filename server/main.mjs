@@ -7,7 +7,7 @@ if (!upstream) throw Error('Set HAYATE_AGENT_URL to the existing agent API origi
 const tls = origin.startsWith('https:') ? {
   key: await readFile(process.env.HAYATE_TLS_KEY_FILE), cert: await readFile(process.env.HAYATE_TLS_CERT_FILE),
 } : undefined;
-const dashboard = await createDashboard({ origin, upstream, tls,
+const dashboard = await createDashboard({ origin, upstream, tls, piUpstream: process.env.PI_WEBUI_ADAPTER_URL,
   host: process.env.HAYATE_DASHBOARD_HOST ?? '127.0.0.1',
   upstreamServername: process.env.HAYATE_AGENT_TLS_NAME,
   upstreamOrigin: process.env.HAYATE_AGENT_ORIGIN,
