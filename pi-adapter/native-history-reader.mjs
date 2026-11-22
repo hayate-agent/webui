@@ -9,6 +9,12 @@ import { historyPage } from './history-page.mjs';
 export class NativeHistoryReader {
  constructor(roots) { this.roots = roots; this.cache = undefined; }
  async page(id, cwd, before) {
+  const loaded = await this.load(id, cwd);
+  return loaded ? historyPage(loaded.entries, loaded.leafId, before) : null;
+ }
+ /** Bounded, read-only: one image block of one message, never the whole file in a response. */
+ async entries(id, cwd) { return (await this.load(id, cwd))?.entries ?? null; }
+ async load(id, cwd) {
   for (const configured of this.roots) {
    const root = await realpath(configured);
    const visit = async (directory, depth) => {
@@ -28,7 +34,7 @@ export class NativeHistoryReader {
       const info = await handle.stat();
       if (!info.isFile() || info.size > 32 * 1024 * 1024) throw Error('Native history exceeds compatibility read budget');
       const key = `${file}:${info.dev}:${info.ino}:${info.size}:${info.mtimeMs}`;
-      if (this.cache?.key === key && this.cache.id === id && this.cache.cwd === cwd) return historyPage(this.cache.entries, this.cache.leafId, before);
+      if (this.cache?.key === key && this.cache.id === id && this.cache.cwd === cwd) return { entries: this.cache.entries, leafId: this.cache.leafId };
       const bytes = Buffer.alloc(info.size);
       let offset = 0;
       while (offset < bytes.length) { const { bytesRead } = await handle.read(bytes, offset, bytes.length - offset, offset); if (!bytesRead) break; offset += bytesRead; }
@@ -42,7 +48,7 @@ export class NativeHistoryReader {
       const entries = records.filter(entry => typeof entry.id === 'string');
       const leafId = entries.at(-1)?.id;
       this.cache = { key, id, cwd, entries, leafId };
-      return historyPage(entries, leafId, before);
+      return { entries, leafId };
      } finally { await handle.close(); }
     }
    };

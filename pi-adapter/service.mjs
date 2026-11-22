@@ -10,7 +10,7 @@ import { createOwnerServer } from './owner-server.mjs';
 import { RpcOwner } from './rpc-owner.mjs';
 import { SessionCatalog } from './catalog.mjs';
 import { NativeHistoryReader } from './native-history-reader.mjs';
-import { historyPage, fitMessage } from './history-page.mjs';
+import { historyPage, fitMessage, imageChunk } from './history-page.mjs';
 import { createEventLog, createPiEventNormalizer } from './event-log.mjs';
 
 export function projectEntries(entries, leafId) {
@@ -209,7 +209,7 @@ export async function createPiService({ directory, roots, port = 0, executable =
         broadcast({ type: 'sessions', sessions: list() }); return json(201, { id: worker.id });
         } finally { pendingCreations--; }
       }
-      const match = /^\/api\/pi\/sessions\/([a-zA-Z0-9_-]{1,128})(?:\/(prompt|abort|snapshot|dialog|release|rename|fork|media|changes))?$/.exec(url.pathname);
+      const match = /^\/api\/pi\/sessions\/([a-zA-Z0-9_-]{1,128})(?:\/(prompt|abort|snapshot|dialog|release|rename|fork|media|changes|image))?$/.exec(url.pathname);
       if (!match) return json(404, { error: 'Unknown PI route' });
       const [, id, action = 'snapshot'] = match, worker = workers.get(id);
       if (req.method === 'POST' && action === 'media') {
@@ -220,6 +220,18 @@ export async function createPiService({ directory, roots, port = 0, executable =
           catch { media.remove(id, result.id); return json(400, { error: 'Image is corrupt, animated or exceeds the 16 megapixel limit' }); }
         }
         return json(200, result);
+      }
+      if (req.method === 'GET' && action === 'image') {
+        // Bounded lazy read of one image block. Source of truth stays the session entries.
+        try {
+          // Never snapshot a live worker/owner for an image: that moves the whole session over its
+          // bounded RPC pipe. Read the persisted session file read-only instead.
+          const nativeOwner = owners.list().find(owner => owner.id === id), live = workers.get(id);
+          const entries = id.startsWith('disk_') ? catalog.snapshot(id).entries : live || nativeOwner ? await nativeHistory.entries(id, (live ?? nativeOwner).cwd) : null;
+          if (!entries) return json(404, { error: 'Session history unavailable' });
+          res.setHeader('Cache-Control', 'private, no-store');
+          return json(200, imageChunk(entries, url.searchParams.get('message') ?? '', Number(url.searchParams.get('index') ?? 0), Number(url.searchParams.get('offset') ?? 0)));
+        } catch (error) { return json(error.status ?? 500, { error: error.status ? error.message : 'Image unavailable' }); }
       }
       if (req.method === 'GET' && action === 'changes') {
         // HTTP fallback for the streaming channel: same envelopes, bounded.

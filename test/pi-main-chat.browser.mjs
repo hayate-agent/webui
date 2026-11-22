@@ -27,7 +27,7 @@ const backend = createServer(async (req, res) => {
   if (input.action === 'pi-chats' && input.operation === 'set') { if (input.status === 'active') added = true; else archived = true; return out({ updated: true }); }
   if (capability === 'streams') return out({ streams: [...chats, ...(!archived ? [{ id: 'session', title: 'Existing PI conversation', projectId: null }] : []), ...(added ? [{ id: 'chosen', title: 'Chosen PI session', projectId: null }] : [])], features: ['pi-live-v1', 'standalone-chats', 'idempotent-stream-create', 'pi-chat-bindings', 'chat-fork-v1'] });
   if (input.action === 'read' && delivered) return out({ id: 'session', title: 'Existing PI conversation', messages: [{ id: 'delivered-followup', role: 'user', text: 'Continue in the same session' }] });
-  if (input.action === 'read') return out({ id: 'session', title: 'Existing PI conversation', busy: false, usage: input.before ? undefined : { tokens: globalThis.usedTokens ?? 90000, contextWindow: 200000, percent: (globalThis.usedTokens ?? 90000) / 2000, model: 'claude-test', thinkingLevel: 'high', totals: { input: 1200, output: 340, cacheRead: 50000, cacheWrite: 0, cost: 0.123 } }, before: input.before ? null : 'call', messages: rolled ? [{ id: 'latest', role: 'assistant', text: 'New output after context window rolled' }] : input.before ? [{ id: 'old', role: 'user', text: 'Earlier question' }] : [{ id: 'call', role: 'assistant', text: 'Inspecting your project\n\n## Findings\n\n- First finding\n- Second finding\n\n```js\nconst answer = 42;\n```\n\n| Item | Status |\n| --- | --- |\n| Build | Ready |', thinking: 'Checking project dependencies first', toolCalls: [{ id: 'tool', name: 'read', arguments: { path: 'README.md' } }] }, { id: 'result', role: 'toolResult', toolName: 'read', toolCallId: 'tool', text: 'README contents' }] });
+  if (input.action === 'read') return out({ id: 'session', title: 'Existing PI conversation', busy: false, ...(globalThis.working ? { busy: true, activity: { text: 'Running the test suite', thinking: '', tools: {}, executions: [{ id: 'live', name: 'bash', arguments: '{"command":"npm test","timeout":60}', status: 'running' }] } } : {}), usage: input.before ? undefined : { tokens: globalThis.usedTokens ?? 90000, contextWindow: 200000, percent: (globalThis.usedTokens ?? 90000) / 2000, model: 'claude-test', thinkingLevel: 'high', totals: { input: 1200, output: 340, cacheRead: 50000, cacheWrite: 0, cost: 0.123 } }, before: input.before ? null : 'call', messages: rolled ? [{ id: 'latest', role: 'assistant', text: 'New output after context window rolled' }] : input.before ? [{ id: 'old', role: 'user', text: 'Earlier question' }] : [{ id: 'call', role: 'assistant', timestamp: '2026-11-20T10:15:00.000Z', text: 'Inspecting your project\n\n## Findings\n\n- First finding\n- Second finding\n\n```js\nconst answer = 42;\n```\n\n| Item | Status |\n| --- | --- |\n| Build | Ready |', thinking: 'Checking project dependencies first', toolCalls: [{ id: 'tool', name: 'read', arguments: { path: 'README.md' } }, { id: 'tool2', name: 'bash', arguments: { preview: JSON.stringify({ command: 'ls -la /tmp', timeout: 5 }) } }] }, { id: 'result', role: 'toolResult', toolName: 'read', toolCallId: 'tool', text: 'README contents', durationMs: 4200 }, { id: 'pic', role: 'user', timestamp: '2026-11-20T10:16:00.000Z', text: 'look', images: [{ mimeType: 'image/png', bytes: 20480 }] }] });
   if (input.action === 'submission-status') return out({ status: input.streamId === 'session-0' ? 'accepted' : 'unknown' });
  if (input.action === 'send') { submitted = input; if (input.text === 'Delayed followup acknowledgement') await new Promise(resolve => { releaseSend = resolve; }); if (!input.mode) { res.statusCode = 409; return out({ error: 'PI busy: choose steer or followUp explicitly' }); } return out({ disposition: 'started' }); }
   if (input.action === 'pi' && input.route.endsWith('/abort')) { aborted = true; return out({ stopped: true }); }
@@ -77,8 +77,19 @@ try {
  // Transcript follows PI's TUI: assistant text flows (no card), tool calls are compact mono lines.
  const flow = await formatted.evaluate(element => { const style = getComputedStyle(element); return { radius: style.borderRadius, border: style.borderTopWidth, background: style.backgroundColor }; });
  assert.deepEqual(flow, { radius: '0px', border: '0px', background: 'rgba(0, 0, 0, 0)' }, 'assistant output flows like the TUI, without a card');
- const toolLine = await page.locator('.ui-message-disclosure.call summary').first().evaluate(element => { const style = getComputedStyle(element); return { font: style.fontFamily.includes('monospace') || style.fontFamily.includes('Menlo'), height: Math.round(element.getBoundingClientRect().height) }; });
- assert.ok(toolLine.font && toolLine.height < 32, `tool call is one compact monospace line (${JSON.stringify(toolLine)})`);
+ const toolLine = await page.locator('.tui-tool').first().evaluate(element => { const style = getComputedStyle(element); return { font: style.fontFamily.includes('monospace') || style.fontFamily.includes('Menlo'), height: Math.round(element.getBoundingClientRect().height), text: element.textContent }; });
+ assert.ok(toolLine.font && toolLine.height < 32 && /read/.test(toolLine.text), `tool call is one compact monospace line (${JSON.stringify(toolLine)})`);
+const toolTexts = await page.locator('.tui-tool').allTextContents();
+ assert.ok(toolTexts.some(text => /bash\s*\$ ls -la \/tmp/.test(text)), `bash call shows its command (${JSON.stringify(toolTexts)})`);
+ assert.ok(!toolTexts.some(text => /[{"]command|"timeout"/.test(text)), 'no JSON in tool lines');
+ // PI parity: every message shows its time, a finished tool shows `Took 4.2s` in a tinted result box, images are announced.
+ const times = await page.locator('time.tui-time').evaluateAll(items => items.filter(item => { const box = item.getBoundingClientRect(); return box.width > 0 && box.height > 0 && getComputedStyle(item).visibility === 'visible'; }).map(item => item.textContent));
+ assert.ok(times.length >= 2 && times.every(text => /\d{1,2}:\d{2}/.test(text)), `messages show their time (${JSON.stringify(times)})`);
+ assert.equal((await page.locator('.tui-took').first().textContent()).trim(), 'Took 4.2s', 'finished tool shows its duration');
+ const resultBg = await page.locator('.tui-result.ok').first().evaluate(element => getComputedStyle(element).backgroundColor);
+ assert.notEqual(resultBg, 'rgba(0, 0, 0, 0)', 'tool result sits in a tinted box');
+ assert.match(await page.locator('.tui-image').first().textContent(), /image\/png · 20 KB/, 'images are shown as attachments, not silently dropped');
+ assert.equal(await page.locator('.ui-message-disclosure').count(), 0, 'no collapsed cards: calls and results are plain transcript lines');
  const userBlock = await page.locator('.ui-chat-message.user').first().evaluate(element => getComputedStyle(element).backgroundColor).catch(() => null);
  if (userBlock) assert.notEqual(userBlock, 'rgba(0, 0, 0, 0)', 'user message is a tinted block');
  assert.equal(await page.locator('.bui-composer').count(), 1, 'new composer surface is active');
@@ -102,11 +113,24 @@ try {
  await refreshed;
  assert.equal(await tree.evaluate(element => element.scrollTop), beforeScroll, 'background conversation refresh preserves sidebar scroll');
  assert.equal(await page.locator('dialog[open]').count(), 0, 'PI is rendered in main chat, not modal');
- await page.getByText('Tool · read', { exact: true }).click();
- await page.getByText('Result · read', { exact: true }).click();
- assert.ok(await page.getByText('README contents', { exact: true }).isVisible());
- await page.getByText('Thinking', { exact: true }).click();
- await page.getByText('Checking project dependencies first', { exact: true }).waitFor();
+ // The footer under the composer shows the version of the bundle that is really served.
+ const footer = await page.locator('[data-webui-version]:visible').first().innerText();
+ assert.ok(await page.locator('[data-webui-version]:visible').first().evaluate(element => { const c = document.querySelector('.bui-composer').getBoundingClientRect(), f = element.getBoundingClientRect(); return f.top >= c.bottom - 1 && f.bottom <= innerHeight + 1 && f.height > 0; }), 'version footer is visible below the composer');
+ const served = await (await page.request.get(`${origin}/build-info.json`)).json();
+ assert.match(footer, /^WebUI \d+\.\d+\.\d+\+(\d+\.)?[a-f0-9]{7}$/, `footer shows a version (${footer})`);
+ assert.equal(footer, `WebUI ${served.version}`, 'footer equals the served build info');
+ // One scroller per region: the page itself never scrolls, and a reload on a #/chat address
+ // brings the open chat into view in the sidebar.
+ const pageScroll = await page.evaluate(() => ({ sh: document.scrollingElement.scrollHeight, ch: document.scrollingElement.clientHeight, iframes: document.querySelectorAll('iframe,frame').length }));
+ assert.equal(pageScroll.iframes, 0, 'no frames');
+ assert.ok(pageScroll.sh <= pageScroll.ch + 1, `the document itself does not scroll (${pageScroll.sh} > ${pageScroll.ch})`);
+ await page.setViewportSize({ width: 1280, height: 420 });
+ await page.reload(); await page.locator('.ui-chat-message').first().waitFor(); await page.waitForTimeout(500);
+ const reveal = await page.evaluate(() => { const tree = document.querySelector('.workspace-tree'), row = tree.querySelector('[aria-current="true"]'); const t = tree.getBoundingClientRect(), r = row?.getBoundingClientRect(); return { found: !!row, inside: !!r && r.top >= t.top - 1 && r.bottom <= t.bottom + 1, scrollable: tree.scrollHeight > tree.clientHeight }; });
+ assert.ok(reveal.found && reveal.inside, `reload on #/chat reveals the open chat in the sidebar (${JSON.stringify(reveal)})`);
+ await page.setViewportSize({ width: 1280, height: 800 });
+ assert.ok(await page.getByText('README contents', { exact: true }).isVisible(), 'tool output is visible without clicking');
+ assert.ok(await page.getByText('Checking project dependencies first').first().isVisible(), 'thinking is visible without clicking');
  rolled = true;
  await page.getByText('New output after context window rolled', { exact: true }).waitFor();
  assert.ok(await page.getByText('Inspecting your project', { exact: true }).isVisible(), 'previously displayed message stays when latest page changes');
@@ -135,8 +159,10 @@ try {
  assert.equal(await editor.inputValue(), 'Draft for existing session');
  await page.getByRole('button', { name: 'PI session 0', exact: true }).click();
  assert.equal(await editor.inputValue(), 'Separate draft for session zero');
+ globalThis.working = true;
  await page.getByRole('button', { name: 'Existing PI conversation', exact: true }).click();
- assert.equal(await page.getByLabel('PI delivery mode').inputValue(), 'followUp', 'followup is default while working');
+ assert.equal(await page.getByLabel('PI delivery mode').inputValue(), 'steer', 'steering is the default while working');
+ await page.getByLabel('PI delivery mode').selectOption('followUp');
  await page.getByLabel('Next project step').fill('Continue in the same session');
  const sent = page.waitForResponse(response => response.request().postData()?.includes('Continue in the same session'));
  await page.getByRole('button', { name: 'Send ↑', exact: true }).click(); await sent;
@@ -144,7 +170,13 @@ try {
  assert.equal(await editor.inputValue(), '', 'successful send clears only submitted draft');
  await page.getByText('Continue in the same session', { exact: true }).waitFor();
  const followupRow = page.getByRole('article').filter({ hasText: 'Continue in the same session' });
- await followupRow.getByText('Follow-up eingereiht · wartet auf PI', { exact: true }).waitFor();
+await followupRow.getByText('Follow-up eingereiht · wartet auf PI', { exact: true }).waitFor();
+ // Chronology + TUI look: the queued message comes AFTER the running bash output, whose command is not JSON.
+ await page.locator('.tui-tool', { hasText: 'npm test' }).waitFor({ timeout: 8000 });
+ const order = await page.evaluate(() => { const rows = [...document.querySelectorAll('article, .tui-tool')]; const at = pattern => rows.findIndex(row => pattern.test(row.textContent)); return { tool: at(/bash\s*\$ npm test/), live: at(/Running the test suite/), queued: at(/Continue in the same session/), json: rows.some(row => /"command"/.test(row.textContent)) }; });
+ assert.ok(order.tool >= 0 && order.live >= 0 && order.queued > order.tool && order.queued > order.live, `queued message follows live output ${JSON.stringify(order)}`);
+ assert.equal(order.json, false, 'live bash call shows its command, not JSON');
+ globalThis.working = false;
  delivered = true;
  await page.waitForFunction(() => [...document.querySelectorAll('article')].filter(row => row.textContent.includes('Continue in the same session')).every(row => !row.textContent.includes('eingereiht')));
  assert.equal(await page.getByText('Continue in the same session', { exact: true }).count(), 1, 'native history replaces queued bubble without duplicate');

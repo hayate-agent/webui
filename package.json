@@ -1,6 +1,6 @@
 {
   "name": "@hayate-agent/webui",
-  "version": "0.1.0",
+  "version": "0.2.4",
   "private": true,
   "type": "module",
   "license": "Apache-2.0",
@@ -14,7 +14,7 @@
   "scripts": {
     "build": "node scripts/build.mjs",
     "test": "node --test test/*.test.mjs",
-    "test:browser": "node test/browser.mjs && node test/unified.browser.mjs && node test/sidebar.browser.mjs && node test/pi.browser.mjs && node test/pi-main-chat.browser.mjs && node test/history-viewport.browser.mjs && node test/history-scroll-stability.browser.mjs && node test/navigation-cache.browser.mjs && node test/live-browser.mjs && node test/media-drafts.browser.mjs && node test/mobile-layout.browser.mjs && node test/command-browser.mjs",
+    "test:browser": "node test/browser.mjs && node test/unified.browser.mjs && node test/sidebar.browser.mjs && node test/pi.browser.mjs && node test/pi-main-chat.browser.mjs && node test/image-display.browser.mjs && node test/local-image-display.browser.mjs && node test/elapsed.browser.mjs && node test/history-viewport.browser.mjs && node test/history-scroll-stability.browser.mjs && node test/history-blank-space.browser.mjs && node test/navigation-cache.browser.mjs && node test/live-browser.mjs && node test/media-drafts.browser.mjs && node test/mobile-layout.browser.mjs && node test/command-browser.mjs",
     "start": "node server/main.mjs",
     "start:local": "node scripts/start-local.mjs",
     "pi:console": "node pi-adapter/console.mjs",

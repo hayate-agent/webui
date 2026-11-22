@@ -311,3 +311,17 @@ test('usage.update refreshes the context figures during streaming, ignores junk 
  state.reset('s', { stream: { epoch: 'e2', seq: 0 }, messages: [], usage: { tokens: 7, totals: {} } });
  assert.equal(state.view.usage.tokens, 7);
 });
+
+test('running tools get a viewer-side start so Elapsed can count; Took is derived when the producer sends none', () => {
+ let clock = 1000;
+ const state = createStreamState({ fetchChanges: async () => ({}), reload: async () => {}, now: () => clock });
+ state.reset('s', { messages: [], stream: { epoch: 'e', seq: 0 }, busy: true });
+ const send = (seq, data) => state.receive({ v: 1, epoch: 'e', session: 's', seq, kind: 'tool.status', data });
+ const tools = () => state.view.activity.executions;
+ assert.equal(send(1, { id: 't1', name: 'bash', status: 'running', arguments: 'sleep 3' }), true);
+ assert.equal(tools()[0].startedAt, 1000); assert.equal(tools()[0].durationMs, undefined);
+ clock = 4200; send(2, { id: 't1', name: 'bash', status: 'completed' });
+ assert.equal(tools()[0].durationMs, 3200);
+ clock = 5000; send(3, { id: 't2', name: 'read', status: 'completed', durationMs: 12 });
+ assert.equal(tools()[1].durationMs, 12, 'producer duration wins');
+});

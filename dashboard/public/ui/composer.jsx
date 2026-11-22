@@ -8,7 +8,7 @@ import { Button } from './shadcn/button';
 export function createComposer() {
   const host = document.createElement('div'); host.className = 'ui-composer-host';
   const refs = {};
-  flushSync(() => createRoot(host).render(
+  flushSync(() => createRoot(host).render(<>
     <form className="workspace-composer ui-composer bui-composer" ref={element => { refs.composer = element; }}>
       <div className="bui-composer-caption"><span>Nachricht verfassen</span><span>PI · Hayate</span></div>
       <div ref={element => { refs.attachments = element; }} aria-label="Attached images" />
@@ -17,9 +17,9 @@ export function createComposer() {
       <div className="ui-composer-toolbar">
         <label className="ui-delivery-label" ref={element => { refs.modeLabel = element; }}>
           <span className="sr-only">Delivery</span>
-          <select aria-label="PI delivery mode" defaultValue="followUp" ref={element => { refs.piMode = element; }}>
-            <option value="followUp">Follow up</option>
+          <select aria-label="PI delivery mode" defaultValue="steer" ref={element => { refs.piMode = element; }}>
             <option value="steer">Steer current work</option>
+            <option value="followUp">Follow up</option>
             <option value="">Send when idle</option>
           </select>
         </label>
@@ -29,7 +29,8 @@ export function createComposer() {
         <Button type="submit" ref={element => { refs.send = element; }} aria-label="Send ↑"><span>Senden</span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 19V5M5 12l7-7 7 7" /></svg></Button>
       </div>
     </form>
-  ));
+    <footer className="ui-app-footer"><span data-webui-version="">WebUI version …</span></footer>
+  </>));
   refs.piMode.hidden = true; refs.piStop.hidden = true;
   return { host, ...refs };
 }

@@ -8,7 +8,7 @@
  */
 export const MAX_LIVE_TEXT = 12000;
 
-export function createStreamState({ fetchChanges, reload, onUpdate = () => {}, onError = () => {} }) {
+export function createStreamState({ fetchChanges, reload, onUpdate = () => {}, onError = () => {}, now = Date.now }) {
  let view, repairing = false, repairAgain = false, queued = [];
  const touch = () => onUpdate(view);
  function apply(envelope) {
@@ -19,6 +19,10 @@ export function createStreamState({ fetchChanges, reload, onUpdate = () => {}, o
    case 'tool.status': {
     const tools = view.activity.executions; const index = tools.findIndex(tool => tool.id === data.id);
     const next = { ...(index >= 0 ? tools[index] : {}), ...data };
+    // The producer sends no start time; PI shows `Elapsed` while a tool runs, so the
+    // viewer stamps first sight and derives `Took` when the producer sent no duration.
+    if (next.startedAt === undefined) next.startedAt = now();
+    if (next.status !== 'running' && !Number.isFinite(next.durationMs)) next.durationMs = Math.max(0, now() - next.startedAt);
     if (index >= 0) tools[index] = next; else tools.push(next);
     if (tools.length > 12) tools.splice(0, tools.length - 12);
     view.activity.busy = true; break;
@@ -84,7 +88,7 @@ export function createStreamState({ fetchChanges, reload, onUpdate = () => {}, o
   reset(session, page) {
    queued = [];
    view = { session, epoch: page.stream?.epoch, seq: page.stream?.seq ?? 0, title: page.title, messages: [...(page.messages ?? [])], usage: page.usage, dialogs: [...(page.dialogs ?? [])].slice(-8),
-    activity: { busy: !!(page.busy && !page.busyUnknown), text: page.liveText ?? page.activity?.text ?? '', thinking: page.liveThinking ?? page.activity?.thinking ?? '', executions: [...(page.liveTools ?? page.activity?.executions ?? [])], waiting: null } };
+    activity: { busy: !!(page.busy && !page.busyUnknown), text: page.liveText ?? page.activity?.text ?? '', thinking: page.liveThinking ?? page.activity?.thinking ?? '', executions: [...(page.liveTools ?? page.activity?.executions ?? [])].map(tool => tool.status === 'running' && tool.startedAt === undefined ? { ...tool, startedAt: tool.durationMs !== undefined ? now() - tool.durationMs : now() } : tool), waiting: null } };
    return view;
   },
   get view() { return view; },

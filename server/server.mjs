@@ -62,7 +62,7 @@ export async function createDashboard({ origin, upstream, piUpstream, host = '12
       req.pipe(remote); return;
     }
     if (req.method !== 'GET') return refuse(405);
-    const file = { '/': ['index.html', 'text/html'], '/app.js': ['app.js', 'text/javascript'], '/style.css': ['style.css', 'text/css'], '/workspace-polish.css': ['workspace-polish.css', 'text/css'], '/chat-output.css': ['chat-output.css', 'text/css'], '/components.css': ['components.css', 'text/css'], '/chat-surface.css': ['chat-surface.css', 'text/css'], '/mobile.css': ['mobile.css', 'text/css'] }[url.pathname];
+    const file = { '/': ['index.html', 'text/html'], '/app.js': ['app.js', 'text/javascript'], '/style.css': ['style.css', 'text/css'], '/workspace-polish.css': ['workspace-polish.css', 'text/css'], '/chat-output.css': ['chat-output.css', 'text/css'], '/components.css': ['components.css', 'text/css'], '/chat-surface.css': ['chat-surface.css', 'text/css'], '/mobile.css': ['mobile.css', 'text/css'], '/build-info.json': ['build-info.json', 'application/json'] }[url.pathname];
     if (!file) return refuse(404);
     try { const bytes = await readFile(path.join(assets, file[0])); res.writeHead(200, { 'Content-Type': `${file[1]}; charset=utf-8` }); res.end(bytes); }
     catch { refuse(503); }
