@@ -4,6 +4,7 @@ import { marked } from 'marked';
 import DOMPurify from 'dompurify';
 import { mountWorkspace } from './workspace-client.js';
 import { authenticate, checkIdentity } from './auth-client.js';
+import { styleAuthDialogs } from './auth-style.js';
 import { mountPi } from './pi-client.js';
 import { setupMobileNavigation } from './mobile-nav.js';
 
@@ -239,6 +240,7 @@ $('export').onclick = () => {
 window.addEventListener('beforeunload', () => { listEvents?.close(); chatEvents?.close(); });
 
 async function init() {
+  styleAuthDialogs();
   await authenticate();
   void mountPi({ request, markdown }).catch(() => { /* Optional PI failure must not block Hayate. */ });
   // Central PI hosts are normal workspace conversations. Do not mount a
