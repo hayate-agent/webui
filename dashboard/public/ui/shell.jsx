@@ -2,6 +2,7 @@ import React from 'react';
 import { createRoot } from 'react-dom/client';
 import { flushSync } from 'react-dom';
 import { Button } from './shadcn/button';
+import { Alert } from './shadcn/alert';
 import { Input } from './shadcn/input';
 import { Textarea } from './shadcn/textarea';
 
@@ -33,7 +34,7 @@ function Shell() {
       <section id="panels" aria-label="Extension panels" />
       <div id="activity" role="status" aria-live="polite" />
       <div id="module-actions" className="module-actions" aria-label="Extension actions" />
-      <div id="error" role="alert" hidden />
+      <Alert id="error" variant="destructive" hidden />
       <form id="composer">
         <label className="sr-only" htmlFor="input">Message</label>
         <Textarea id="input" rows={3} placeholder="Ask Hayate, or use /help…" required />

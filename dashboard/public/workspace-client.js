@@ -7,8 +7,8 @@ import { setupMobileNavigation } from './mobile-nav.js';
 import { createSessionCard } from './ui/session-card.jsx';
 import { settleReceipts } from './receipts.js';
 import { renderContextMeter } from './ui/context-meter.jsx';
-import { rowButtonClass, headingButtonClass, iconButtonClass } from './ui/button-class.js';
-import { styleControl } from './ui/control-class.js';
+import { rowButtonClass, headingButtonClass, iconButtonClass, actionRowClass, disclosureClass } from './ui/button-class.js';
+import { styleControl, styleAlert } from './ui/control-class.js';
 // Optional frontend projection. No project/agent/secret domain state is stored here.
 import { createLiveTransport } from './live-transport.js';
 import { discoverAgent } from './agent-discovery.js';
@@ -32,6 +32,7 @@ export async function mountWorkspace({ request, notice, markdown }) {
   const node = (tag, text, cls) => { const e = document.createElement(tag); if (text !== undefined) e.textContent = text; if (cls) e.className = cls; return styleControl(e); };
   const run = fn => (...args) => Promise.resolve().then(() => fn(...args)).catch(e => notice(e.message));
   const button = (text, fn) => { const e = node('button', text); e.type = 'button'; e.title = text; e.onclick = run(fn); return e; };
+  const withClass = (element, classes) => { element.classList.add(...classes.split(' ')); return element; };
   let state, projectId, streamId, events, visible = false;
   let remoteSelection, remoteRefreshing = false, browsingAgent, resyncStream = false;
   let localHistory;
@@ -85,7 +86,7 @@ export async function mountWorkspace({ request, notice, markdown }) {
   const headingControls = node('div', undefined, 'chat-heading-controls'); headingControls.append(agentLabel, projectLabel, menu);
   heading.append(headingIdentity, headingControls);
   projectPicker.onchange = run(() => selectProject(projectPicker.value || undefined));
-  const errorBox = node('p', '', 'workspace-error'); errorBox.setAttribute('role', 'alert'); errorBox.hidden = true;
+  const errorBox = styleAlert(node('p', '', 'workspace-error')); errorBox.setAttribute('role', 'alert'); errorBox.hidden = true;
   const legacyNotice = notice; notice = message => { legacyNotice(message); errorBox.textContent = message ?? ''; errorBox.hidden = !message; };
   const body = node('section', undefined, 'workspace-content');
   const { host: composerHost, composer, input, send, piMode, piStop, attach, files, attachments } = createComposer();
@@ -233,9 +234,9 @@ export async function mountWorkspace({ request, notice, markdown }) {
     treeSignature = signature;
     const scrollTop = tree.scrollTop, scrollLeft = tree.scrollLeft;
     const fragment = document.createDocumentFragment();
-    if (capabilities['project-creation'] !== false) fragment.append(button('＋ New project', () => projectDialog()));
-    if (capabilities['agent-hub'] === 1) fragment.append(button('Agents', agentsDialog));
-    if (hiddenAgents.size) fragment.append(button('Hidden items…', () => dialog('Sidebar visibility', d => {
+    if (capabilities['project-creation'] !== false) fragment.append(withClass(button('＋ New project', () => projectDialog()), actionRowClass));
+    if (capabilities['agent-hub'] === 1) fragment.append(withClass(button('Agents', agentsDialog), actionRowClass));
+    if (hiddenAgents.size) fragment.append(withClass(button('Hidden items…', () => dialog('Sidebar visibility', d => {
       const agents = [...(capabilities['local-agent'] !== false ? [{ id: 'local', name: state.agent }] : []), ...agentRoster];
       const sourceOf = id => id === 'local' ? state : agentSnapshots.get(id);
       for (const key of [...hiddenAgents]) {
@@ -244,7 +245,7 @@ export async function mountWorkspace({ request, notice, markdown }) {
         const source = sourceOf(owner), item = (kind === 'chat' ? source?.streams : source?.projects)?.find(entry => entry.id === id);
         d.append(button(`Show ${kind} ${item?.title ?? id}`, () => { setAgentHidden(key, false); d.close(); }));
       }
-    })));
+    })), actionRowClass));
     if (capabilities['local-agent'] !== false && !hiddenAgents.has('local')) fragment.append(renderAgentTree(state, undefined, state.agent));
     for (const agent of agentRoster.filter(agent => !hiddenAgents.has(agent.id))) fragment.append(renderAgentTree(agentSnapshots.get(agent.id) ?? { projects: [], streams: [] }, agent.id, agent.name));
     tree.replaceChildren(fragment);
@@ -305,10 +306,10 @@ export async function mountWorkspace({ request, notice, markdown }) {
         const summary = node('summary');
         const label = button(`${members.some(s => s.unread) ? '● ' : ''}${project.title}`, () => { browsingAgent = agentId; peerState = agentId ? source : undefined; return selectProject(project.id); });
         const toggle = button(details.open ? '▾' : '▸', () => {});
-        toggle.className = 'workspace-disclosure'; toggle.setAttribute('aria-label', `Expand or collapse ${project.title}`);
+        toggle.className = `workspace-disclosure ${disclosureClass}`; toggle.setAttribute('aria-label', `Expand or collapse ${project.title}`);
         toggle.onclick = event => { event.preventDefault(); details.open = !details.open; sessionStorage.setItem(key, String(details.open)); };
         details.ontoggle = () => { toggle.textContent = details.open ? '▾' : '▸'; toggle.setAttribute('aria-expanded', String(details.open)); };
-        summary.append(label, toggle);
+        label.classList.add(...rowButtonClass.split(' ')); summary.append(label, toggle);
         if (agentId) {
           const more = button('⋮', event => popup(event, [['Hide project from sidebar', () => setAgentHidden(hideKey('project', agentId, project.id), true)]])); more.setAttribute('aria-label', `Settings for ${project.title}`); more.classList.add(...iconButtonClass.split(' ')); summary.append(more);
         }
@@ -815,7 +816,7 @@ export async function mountWorkspace({ request, notice, markdown }) {
             formDialog('Rename session', (form, renameDialog) => {
               const editor = field(form, 'Session name', session.name ?? ''); editor.required = true; editor.maxLength = 300;
               form.append(node('p', 'Updates the name in PI. Your messages and session stay unchanged.', 'workspace-context'));
-              const error = node('p', '', 'workspace-error'); error.setAttribute('role', 'alert'); form.append(error);
+              const error = styleAlert(node('p', '', 'workspace-error')); error.setAttribute('role', 'alert'); form.append(error);
               return async () => {
                 const next = editor.value.trim(); if (!next) { error.textContent = 'Enter a session name.'; return; }
                 try {
@@ -1021,7 +1022,7 @@ export async function mountWorkspace({ request, notice, markdown }) {
     const adapter = node('select'); adapter.setAttribute('aria-label', 'Transport adapter');
     for (const value of data.adapters) { const option = node('option', value); option.value = value; adapter.append(option); }
     if (data.adapters.length > 1) form.append(adapter);
-    const error = node('p', '', 'workspace-error'); error.setAttribute('role', 'alert'); error.hidden = true;
+    const error = styleAlert(node('p', '', 'workspace-error')); error.setAttribute('role', 'alert'); error.hidden = true;
     const submit = node('button', 'Connect agent'); submit.type = 'submit';
     form.append(error, submit, button('Back to agents', agentsDialog)); section.append(form); body.replaceChildren(section);
     form.onsubmit = event => { event.preventDefault(); if (submit.disabled) return;

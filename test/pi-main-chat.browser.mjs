@@ -51,6 +51,8 @@ try {
  await page.waitForFunction(() => window.workspaceEventSource?.readyState === 1);
  await page.evaluate(() => window.workspaceEventSource.dispatchEvent(new Event('error')));
  await page.locator('.workspace-error').filter({ hasText: 'Workspace connection interrupted' }).waitFor();
+ assert.match(await page.locator('.workspace-error').filter({ hasText: 'Workspace connection interrupted' }).getAttribute('class'), /border-destructive\/50.*text-destructive|text-destructive.*border-destructive\/50/, 'workspace error is a shadcn destructive Alert');
+ assert.match(await page.locator('#error').getAttribute('class'), /border-destructive\/50/, 'global error box is a shadcn destructive Alert');
  await page.evaluate(() => window.workspaceEventSource.dispatchEvent(new Event('open')));
  assert.equal(await page.locator('.workspace-error').isVisible(), false, 'reconnection clears stale interruption alert');
  const polish = await page.request.get(`${origin}/workspace-polish.css`);
@@ -245,6 +247,7 @@ await followupRow.getByText('Follow-up eingereiht · wartet auf PI', { exact: tr
  await picker.getByRole('button', { name: 'Open as chat', exact: true }).waitFor();
  await picker.getByRole('button', { name: 'Rename session', exact: true }).click();
  const renameDialog = page.getByRole('dialog', { name: 'Rename session', exact: true });
+ for (const box of await renameDialog.locator('.workspace-error').all()) assert.equal(await box.isVisible(), false, 'an empty error line in a dialog stays invisible until an error exists');
  // Controls built imperatively inside dialogs and the header pickers carry the shadcn field/button classes.
  assert.match(await renameDialog.getByLabel('Session name', { exact: true }).getAttribute('class'), /border-input.*rounded-md|rounded-md.*border-input/, 'dialog field is a shadcn Input');
  const shadcnInput = await page.locator('#search').getAttribute('class');

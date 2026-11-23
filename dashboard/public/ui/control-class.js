@@ -3,6 +3,7 @@
 // source of truth; this file lives under ui/ so Tailwind's @source scan generates every class.
 import { buttonVariants } from './shadcn/button';
 import { inputClassName, textareaClassName, nativeSelectClassName } from './shadcn/field-classes';
+import { alertVariants } from './shadcn/alert';
 import { cn } from '../lib/utils';
 
 const INPUT = inputClassName;
@@ -28,3 +29,8 @@ export function styleDialogControls(root) {
     if (!button.className) button.className = button.type === 'submit' ? primaryButtonClass : outlineButtonClass;
   }
 }
+
+/** Error/notice boxes: shadcn Alert (destructive). */
+// `empty:hidden`: boxes that exist before an error happens (dialog error lines) stay invisible until they have text. `w-auto`: they carry margins in some places.
+export const alertClass = cn(alertVariants({ variant: 'destructive' }), 'bg-background w-auto empty:hidden');
+export function styleAlert(element) { element.className = cn(alertClass, element.className); return element; }

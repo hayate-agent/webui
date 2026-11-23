@@ -14,3 +14,8 @@ export const iconButtonClass = cn(buttonVariants({ variant: 'ghost', size: 'icon
 /** Outline icon button: the mobile drawer toggle. */
 // Hidden by default (desktop); the viewport media query below shows it, so no legacy rule is involved.
 export const navToggleClass = cn(buttonVariants({ variant: 'outline', size: 'icon' }), 'hidden max-[760px]:inline-flex h-[44px] w-[44px] shrink-0');
+
+/** Sidebar action rows ("New project", "Agents", "Hidden items…"): full-width outline-free ghost buttons. */
+export const actionRowClass = cn(buttonVariants({ variant: 'ghost', size: 'sm' }), 'h-[36px] w-full min-w-0 justify-start text-[13px] font-medium text-ink-2');
+/** Project row disclosure chevron. */
+export const disclosureClass = cn(buttonVariants({ variant: 'ghost', size: 'icon' }), 'h-[36px] w-[28px] shrink-0 text-ink-2');
