@@ -1,5 +1,5 @@
 {
-  "contentDigest": "09a88d29269d3ab745c41c556ebc0b78ec8bdfa8bdf97900ccfc188b3437bc49",
+  "contentDigest": "c1da49a87ab0768fb4ddc6f294b730c3d48ce3a6d7632da64e5795757be1775a",
   "files": [
     {
       "mode": "100644",
@@ -39,7 +39,7 @@
     {
       "mode": "100644",
       "path": "PUBLIC-SOURCE.json",
-      "sha256": "7449032e5383ded3bef2be087dd9ccc5d24ba1ac9cc7de8aa297898a7bcbdc0b"
+      "sha256": "28fd757996eaa5ad74ac2ff185f645fdd2d88ceaa751a677575b2997e44a3f39"
     },
     {
       "mode": "100644",
@@ -434,12 +434,12 @@
     {
       "mode": "100644",
       "path": "package-lock.json",
-      "sha256": "702327966cd2e645e4e0c4fec0dc19ae3e6770bb1a50c53441b10ed0827f021c"
+      "sha256": "3859f3e6efa7923b26d0559f772c3b7c84b7ab94686080d70ab0516eceef6583"
     },
     {
       "mode": "100644",
       "path": "package.json",
-      "sha256": "db3e430ff8d8af7fd7eb104ace945d1303298318471de67c05f2391d4bdaa9a5"
+      "sha256": "d3c329c5ead6be5cf157c45e3ed46603686a0e06f9ff2702d0c0ab116f102eec"
     },
     {
       "mode": "100644",
@@ -474,7 +474,7 @@
     {
       "mode": "100644",
       "path": "pi-adapter/extension.mjs",
-      "sha256": "0b303f0047cb97b64f7a4c5433fabd3b8c510deb0efd72bb35b838620a4849ee"
+      "sha256": "43b341f210ccd1ea996ed72b5ad0b07150a2fb3b11ba618d6d79a00b4cc01fee"
     },
     {
       "mode": "100644",
@@ -500,6 +500,11 @@
       "mode": "100644",
       "path": "pi-adapter/native-history-reader.mjs",
       "sha256": "00ab482466d8eef067394b590017c0a54f769aa0e885950782f57ae01717c2d2"
+    },
+    {
+      "mode": "100644",
+      "path": "pi-adapter/openui-guide.mjs",
+      "sha256": "20a02fa1f30acf03ffd307da5e4d39786a40f49839650d02dff0fea4cf43ecf2"
     },
     {
       "mode": "100644",
@@ -530,6 +535,11 @@
       "mode": "100644",
       "path": "scripts/install-connector.mjs",
       "sha256": "91be5f2773468687937ea21b2dbe212e91172a73f4d75fd79701ef600e6ec614"
+    },
+    {
+      "mode": "100644",
+      "path": "scripts/openui-guide.mjs",
+      "sha256": "58a7d1011daf2125b4b103f619b511f1a5559c115bbfe207e034279e6ba1e374"
     },
     {
       "mode": "100644",
@@ -784,7 +794,7 @@
     {
       "mode": "100644",
       "path": "test/pi-connector.test.mjs",
-      "sha256": "21f5c34025d1c0165eae93b8c0c4ae72a241d8b66d4ad15864b235d9371d9e4a"
+      "sha256": "ee63726fd32bc348496117371c6ce3fd00e349f885512b85a819cf8a9bea0166"
     },
     {
       "mode": "100644",
@@ -954,5 +964,5 @@
   ],
   "historyPolicy": "fresh public snapshot; no private ancestry or source author metadata",
   "schema": 1,
-  "sourceSHA": "4bc68d28a0db1c5d3f29f8b39b955d00819d9f7a"
+  "sourceSHA": "563e7d85d4940f679ac1c2b09899760b9a1dfa0a"
 }
