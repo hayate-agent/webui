@@ -3,6 +3,7 @@ import { createServer as httpsServer, request as httpsRequest } from 'node:https
 import { readFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
+import { dashboardToolMode } from './dashboard-config.mjs';
 
 const assetRoot = fileURLToPath(new URL('../dist/public/', import.meta.url));
 const canonical = value => {
@@ -14,7 +15,7 @@ const loopback = host => ['127.0.0.1', '[::1]', 'localhost'].includes(host);
 
 /** Standalone presentation process. All projects, work and credentials remain on
  * the configured agent API. No Core imports, secret vault or agent runtime. */
-export async function createDashboard({ origin, upstream, piUpstream, host = '127.0.0.1', port, tls, upstreamServername, upstreamOrigin, ca, assets = assetRoot }) {
+export async function createDashboard({ origin, upstream, piUpstream, host = '127.0.0.1', port, tls, upstreamServername, upstreamOrigin, ca, assets = assetRoot, dashboardTools }) {
   const publicURL = canonical(origin), backend = canonical(upstream);
   const apiOrigin = canonical(upstreamOrigin ?? upstream);
   const piBackend = piUpstream ? canonical(piUpstream) : undefined;
@@ -23,6 +24,7 @@ export async function createDashboard({ origin, upstream, piUpstream, host = '12
   if (piBackend && (!loopback(host) || !loopback(publicURL.hostname) || piBackend.protocol !== 'http:' || piBackend.hostname !== '127.0.0.1')) throw Error('PI adapter requires a loopback-only dashboard and adapter');
   if (publicURL.protocol === 'https:' && !tls || publicURL.protocol === 'http:' && (!loopback(host) || !loopback(publicURL.hostname))) throw Error('Network dashboard requires TLS');
   if (backend.protocol !== 'https:' && !loopback(backend.hostname)) throw Error('Remote backend requires HTTPS');
+  const toolMode = dashboardToolMode(dashboardTools);
   const sockets = new Set(), requests = new Set(); let closing = false;
   const handle = async (req, res) => {
     res.setHeader('Cache-Control', 'no-store'); res.setHeader('X-Content-Type-Options', 'nosniff');
@@ -62,7 +64,11 @@ export async function createDashboard({ origin, upstream, piUpstream, host = '12
       req.pipe(remote); return;
     }
     if (req.method !== 'GET') return refuse(405);
-    const file = { '/': ['index.html', 'text/html'], '/app.js': ['app.js', 'text/javascript'], '/style.css': ['style.css', 'text/css'], '/workspace-polish.css': ['workspace-polish.css', 'text/css'], '/chat-output.css': ['chat-output.css', 'text/css'], '/components.css': ['components.css', 'text/css'], '/chat-surface.css': ['chat-surface.css', 'text/css'], '/mobile.css': ['mobile.css', 'text/css'], '/build-info.json': ['build-info.json', 'application/json'] }[url.pathname];
+    if (url.pathname === '/dashboard-config.json') {
+      // Non-GET requests were already refused (405) above.
+      res.writeHead(200, { 'Content-Type': 'application/json' }); return res.end(JSON.stringify({ tools: toolMode }));
+    }
+    const file = { '/': ['index.html', 'text/html'], '/app.js': ['app.js', 'text/javascript'], '/dashboard.js': ['dashboard.js', 'text/javascript'], '/style.css': ['style.css', 'text/css'], '/workspace-polish.css': ['workspace-polish.css', 'text/css'], '/chat-output.css': ['chat-output.css', 'text/css'], '/components.css': ['components.css', 'text/css'], '/chat-surface.css': ['chat-surface.css', 'text/css'], '/mobile.css': ['mobile.css', 'text/css'], '/build-info.json': ['build-info.json', 'application/json'] }[url.pathname];
     if (!file) return refuse(404);
     try { const bytes = await readFile(path.join(assets, file[0])); res.writeHead(200, { 'Content-Type': `${file[1]}; charset=utf-8` }); res.end(bytes); }
     catch { refuse(503); }

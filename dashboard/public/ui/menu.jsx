@@ -15,7 +15,7 @@ function ActionPopup({ anchor, items, dispose, onError }) {
 // Shared accessible primitive: Base UI owns focus, keyboard navigation,
 // dismissal and viewport collision handling, not hand-written menu logic.
 let disposeCurrent;
-export function openActionMenu(anchor, items, onError, pointer) {
+export function openActionMenu(anchor, items, onError, pointer, align = 'start') {
   disposeCurrent?.();
   const host = document.createElement('div'); document.body.append(host);
   const root = createRoot(host);
@@ -30,7 +30,7 @@ export function openActionMenu(anchor, items, onError, pointer) {
   root.render(
     <Menu.Root open onOpenChange={open => { if (!open) dispose(); }}>
       <Menu.Portal>
-        <Menu.Positioner anchor={virtualAnchor} sideOffset={6} align="start" collisionPadding={8} style={{ zIndex: 100 }}>
+        <Menu.Positioner anchor={virtualAnchor} sideOffset={6} align={align} collisionPadding={8} style={{ zIndex: 100 }}>
           <ActionPopup anchor={anchor} items={items} dispose={dispose} onError={onError} />
         </Menu.Positioner>
       </Menu.Portal>

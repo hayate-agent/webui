@@ -60,6 +60,14 @@ test('authenticated relay scopes routes, never forwards cookies and rejects repl
   assert.equal((await invoke(fork)).result.id, 'created-session'); assert.equal(calls, 4, 'fork receipt survives relay restart');
   listedSessions = [{ id: 'created-session', name: 'Long running chat', owner: 'tui', cwd: '/fixture' }];
   assert.equal((await invoke({ action: 'list' })).result.streams[0].title, 'Long running chat');
+  // Dashboard tool list_sessions: only the selected chat, name + busy only (no cwd, no owner, no message text).
+  listedSessions = [{ id: 'created-session', name: 'Long running chat', owner: 'tui', cwd: '/fixture/secret-dir', busy: true, preview: 'secret-text' }, { id: 'not-selected', name: 'Private chat', owner: 'tui', cwd: '/fixture/other' }];
+  const toolResult = await message({ action: 'dashboard-tools', op: 'call', streamId: 'created-session', tool: 'list_sessions', args: {} });
+  assert.equal(toolResult.ok, true);
+  // Dashboards poll. Reads must not fill the non-evicting mutation ledger (4096): each kind alone runs past the limit, socket stays open.
+  for (let i = 0; i < 4200; i++) assert.equal((await message({ action: 'dashboard-tools', op: 'list', streamId: 'created-session' })).ok, true);
+  for (let i = 0; i < 4200; i++) assert.equal((await message({ action: 'dashboard-tools', op: 'call', streamId: 'created-session', tool: 'list_sessions', args: {} })).ok, true);
+  assert.deepEqual(toolResult.result, { result: { sessions: [{ id: 'created-session', name: 'Long running chat', busy: true }], count: 1 } }, 'same envelope the browser bridge reads (response.result)');
   listedSessions = [];
   const retained = (await invoke({ action: 'list' })).result.streams[0];
   assert.equal(retained.id, 'created-session', 'temporary native disconnection does not remove selected chat');
@@ -80,6 +88,16 @@ test('authenticated relay scopes routes, never forwards cookies and rejects repl
   assert.equal([...answers.values()].filter(answer => answer.ok).length, 8);
   assert.equal([...answers.values()].filter(answer => !answer.ok).length, 4);
   assert.equal((await invoke({ action: 'list' })).ok, true, 'relay remains usable after capacity rejection');
+  // Dashboard tools: one read-only tool; unknown tools and bad conversation ids are refused; no private data leaks.
+  const toolList = await message({ action: 'dashboard-tools', op: 'list', streamId: 'existing' });
+  assert.equal(toolList.ok, true); assert.deepEqual(toolList.result ?? toolList.data ?? toolList.value, { tools: [{ name: 'list_sessions', kind: 'read' }] });
+  assert.equal((await message({ action: 'dashboard-tools', op: 'call', streamId: 'existing', tool: 'delete_everything', args: {} })).ok, false);
+  assert.equal((await message({ action: 'dashboard-tools', op: 'list', streamId: '../x' })).ok, false, 'conversation id is validated');
+  const listed = await message({ action: 'dashboard-tools', op: 'call', streamId: 'existing', tool: 'list_sessions', args: {} });
+  assert.equal(listed.ok, true);
+  const body = JSON.stringify(listed); assert.ok(!body.includes('/fixture'), 'no working directory in the result'); assert.ok(!body.includes('secret-text'), 'no message text in the result');
+  const callsBefore = calls;
+  assert.equal(calls, callsBefore, 'no dashboard tool request reaches the PI service');
  } finally { await client?.stop(); local.closeAllConnections(); await new Promise(resolve => local.close(resolve)); await rm(dir, { recursive: true, force: true }); }
 });
 

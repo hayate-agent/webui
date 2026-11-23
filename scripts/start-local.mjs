@@ -4,6 +4,7 @@ import { homedir } from 'node:os';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { createPiService } from '../pi-adapter/service.mjs';
 import { createDashboard } from '../server/server.mjs';
+import { dashboardToolsFromEnvironment } from '../server/dashboard-config.mjs';
 
 const projectRoot = fileURLToPath(new URL('../', import.meta.url));
 export async function startLocal(env = process.env) {
@@ -22,7 +23,9 @@ export async function startLocal(env = process.env) {
   const adapter = await createPiService({ directory, roots, port: env.PI_WEBUI_PORT === undefined ? 0 : Number(env.PI_WEBUI_PORT), executable: env.PI_WEBUI_EXECUTABLE ?? 'pi', sessionRoots: env.PI_WEBUI_SESSION_ROOTS?.split('\n').filter(Boolean) ?? [] });
   let dashboard;
   try {
-    dashboard = await createDashboard({ origin, upstream: env.HAYATE_AGENT_URL,
+    const tools = dashboardToolsFromEnvironment(env);
+    if (tools.warning) console.warn(tools.warning);
+    dashboard = await createDashboard({ origin, upstream: env.HAYATE_AGENT_URL, dashboardTools: tools.mode,
       piUpstream: `http://127.0.0.1:${adapter.server.address().port}`,
       upstreamOrigin: env.HAYATE_AGENT_ORIGIN, upstreamServername: env.HAYATE_AGENT_TLS_NAME,
       ca: env.HAYATE_AGENT_CA_FILE ? await readFile(env.HAYATE_AGENT_CA_FILE) : undefined,

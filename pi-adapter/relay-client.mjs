@@ -3,6 +3,16 @@ import { chatBindings } from './chat-bindings.mjs';
 import { readFile, writeFile, mkdir, chmod, lstat, rename } from 'node:fs/promises';
 import path from 'node:path';
 const capabilities = ['projects', 'streams', 'messages', 'activity'];
+// Read-only data a dashboard may query on a PI host. Adding a tool here is a security decision (docs/DASHBOARD-TOOLS.md).
+// Results contain names and flags only: no paths, no message text.
+const DASHBOARD_TOOLS = [
+ { name: 'list_sessions', kind: 'read', async run({ request, bindings }) {
+   const [result, selected] = await Promise.all([request('/api/pi/sessions'), bindings.list()]);
+   const sessions = (Array.isArray(result?.sessions) ? result.sessions : []).filter(session => typeof session?.id === 'string' && selected[session.id]?.status === 'active').slice(0, 200)
+     .map(session => ({ id: session.id, name: String(session.name ?? '').slice(0, 200), busy: session.busy === true }));
+   return { sessions, count: sessions.length };
+ } },
+];
 const UUID = /^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/;
 export async function enrollRelay({ endpoint, code, name, stateFile }) {
  const url = new URL(endpoint);
@@ -207,6 +217,16 @@ export async function startRelayClient({ stateFile, endpoint, adapterOrigin, Web
     submission.status = 'accepted';
     return result;
   }
+  // Dashboard tools (docs/DASHBOARD-TOOLS.md). A PI host offers none: the list is empty and a call is refused,
+  // so dashboards in PI chats render layout and static values only. A real tool source plugs in here.
+  if (frame.capability === 'messages' && input.action === 'dashboard-tools') {
+    if (typeof input.streamId !== 'string' || !/^[A-Za-z0-9_-]+$/.test(input.streamId)) throw Error('Dashboard tools need a conversation');
+    if (input.op === 'list') return { tools: DASHBOARD_TOOLS.map(({ name, kind }) => ({ name, kind })) };
+    // Only tools from the fixed list below, only read-only, only chats the operator selected for this relay.
+    const tool = input.op === 'call' ? DASHBOARD_TOOLS.find(entry => entry.name === input.tool) : undefined;
+    if (!tool) throw Error('Unknown dashboard tool');
+    return { result: await tool.run({ request, bindings }) };
+  }
   if (frame.capability === 'activity' && input.action === 'list') return { streams: [], features: ['pi-live-v1'] };
   if (frame.capability !== 'messages' || input.action !== 'pi') throw Error('Unsupported PI capability');
   const route = input.route;
@@ -229,7 +249,9 @@ export async function startRelayClient({ stateFile, endpoint, adapterOrigin, Web
    if (!binary && frame?.type === 'features' && Array.isArray(frame.features)) { if (frame.features.includes('stream-delta-v1')) streaming = current; return; }
    try { if (binary || !UUID.test(frame.id) || frame.type !== 'request' || !frame.input || typeof frame.input !== 'object' || seen.has(frame.id) || seenReads.has(frame.id)) throw Error(); }
    catch { current.close(1008, 'Invalid request'); return; }
-   const readOnly = ['list', 'read', 'resolve', 'submission-status', 'fork-eligibility', 'changes', 'image-read'].includes(frame.input.action) || frame.input.action === 'pi-chats' && ['list', 'preview'].includes(frame.input.operation) || frame.input.action === 'pi' && frame.input.body === undefined;
+   const readOnly = ['list', 'read', 'resolve', 'submission-status', 'fork-eligibility', 'changes', 'image-read'].includes(frame.input.action) || frame.input.action === 'pi-chats' && ['list', 'preview'].includes(frame.input.operation) || frame.input.action === 'pi' && frame.input.body === undefined
+    // Dashboards poll: listing tools and calling a read tool must not fill the (non-evicting) mutation ledger.
+    || frame.input.action === 'dashboard-tools' && (frame.input.op === 'list' || frame.input.op === 'call' && DASHBOARD_TOOLS.some(tool => tool.name === frame.input.tool && tool.kind === 'read'));
    if (readOnly) {
     if (seenReads.size >= 4096) seenReads.delete(seenReads.values().next().value);
     seenReads.add(frame.id);

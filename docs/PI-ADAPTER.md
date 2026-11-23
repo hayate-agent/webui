@@ -33,7 +33,7 @@ PI_WEBUI_BRIDGE_DIR="$HOME/.local/state/pi-webui" pi -e /absolute/path/to/webui/
 For the dashboard, retain the existing Hayate URL and add the fixed PI adapter URL:
 
 ```sh
-npm ci
+npm ci --ignore-scripts
 npm run build
 HAYATE_AGENT_URL=https://existing-hayate-api.example \
 PI_WEBUI_ADAPTER_URL=http://127.0.0.1:3211 \

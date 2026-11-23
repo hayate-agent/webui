@@ -52,7 +52,7 @@ export async function mountPi({ request, markdown, label = 'Local PI', poll = fa
         dirty = false; const id = selected;
         const snapshot = await request(`/api/pi/sessions/${id}`);
         if (id !== selected) continue;
-        transcript.replaceChildren(...snapshot.messages.map(message => { const row = document.createElement('article'); row.className = `message ${message.role}`; const label = document.createElement('small'); label.textContent = message.role; row.append(label, markdown(message.text)); return row; }));
+        transcript.replaceChildren(...snapshot.messages.map(message => { const row = document.createElement('article'); row.className = `message ${message.role}`; const label = document.createElement('small'); label.textContent = message.role; row.append(label, markdown(message.text, { live: message.role === 'assistant' })); return row; }));
         renderDialogs(snapshot.dialogs ?? []);
         if (poll) liveText = snapshot.liveText ?? '';
         paintLive();

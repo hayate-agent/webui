@@ -2,7 +2,6 @@
 // stand-alone by unit tests, so it cannot import UI code). This observer gives them the shadcn
 // field/button/alert classes, exactly like the Base UI dialogs.
 import { styleDialogControls, styleAlert } from './ui/control-class.js';
-import { actionRowClass } from './ui/button-class.js';
 
 function style(root) {
   for (const dialog of root.querySelectorAll?.('dialog.auth-dialog, dialog.account-dialog') ?? []) {
@@ -12,7 +11,6 @@ function style(root) {
     styleDialogControls(dialog);
     if (dialog.classList.contains('auth-dialog')) dialog.querySelector('button[type="submit"]')?.classList.add('w-full');
   }
-  for (const button of root.querySelectorAll?.('#sign-out, #account-settings') ?? []) if (button.dataset.ui !== '1') { button.dataset.ui = '1'; button.className = actionRowClass; }
 }
 export function styleAuthDialogs() {
   style(document);

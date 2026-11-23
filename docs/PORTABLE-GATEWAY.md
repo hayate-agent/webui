@@ -11,7 +11,7 @@ Supported managed services: macOS launchd and Linux user systemd. The adapter us
 Install Node >=22.19.0, npm, and PI on the target host. Clone this repository to a stable location (not a temporary worktree), select a reviewed revision and run:
 
 ```sh
-npm ci
+npm ci --ignore-scripts
 npm run build
 npm run pi:install-connector
 ```
