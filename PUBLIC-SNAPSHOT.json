@@ -1,5 +1,5 @@
 {
-  "contentDigest": "4ac4308972f2d37418e3c32c3fec156f56639c1c23d256524bce9e6259430ad3",
+  "contentDigest": "765baa0d87b589cc938f4b4f067d1c5025837ee343bcaf8c5348b593d6a24ed9",
   "files": [
     {
       "mode": "100644",
@@ -39,7 +39,7 @@
     {
       "mode": "100644",
       "path": "PUBLIC-SOURCE.json",
-      "sha256": "b9bdf1fef92faaf93216eaa2d68ddf21edde1837ca7271bd6e629c3ef890ca7f"
+      "sha256": "9b9c112f2d9627809f042f7041f454fdd580c83c06b8e6d77a955a993fc1e4c3"
     },
     {
       "mode": "100644",
@@ -64,12 +64,17 @@
     {
       "mode": "100644",
       "path": "dashboard/public/app.js",
-      "sha256": "0cdd8f29b92f0fee0d2e28261c746aeaf4586333a81188f19f2228b5d4824832"
+      "sha256": "7c7ce22e42f4a702d3bcf8f288e3c8195e6ef90f3de4686cb231fc9e5863a8f2"
     },
     {
       "mode": "100644",
       "path": "dashboard/public/auth-client.js",
       "sha256": "32536cd803a64bd91fb3c22118af478dbfea46a7ab85ca2d3aafa7a4a097cd92"
+    },
+    {
+      "mode": "100644",
+      "path": "dashboard/public/auth-style.js",
+      "sha256": "e89b9b0e91e448418fff6b014272fe45648d2c7369025c2939d309b8b707182c"
     },
     {
       "mode": "100644",
@@ -364,7 +369,7 @@
     {
       "mode": "100644",
       "path": "package.json",
-      "sha256": "ee8d83f7b13b11ea145528ee8da48c1cfca999fee2823a969dcb589273441f45"
+      "sha256": "dd27f9581ed2daf3d523d4d0c495e1e7d090c07f6b16d88340b58eefa65a0a8d"
     },
     {
       "mode": "100644",
@@ -593,6 +598,11 @@
     },
     {
       "mode": "100644",
+      "path": "test/login.browser.mjs",
+      "sha256": "f62f046c91a5c1d5fa1ba96800cadebb49201a540fea0392e122d79ff0abbc31"
+    },
+    {
+      "mode": "100644",
       "path": "test/media-drafts.browser.mjs",
       "sha256": "45747d2f209fedff2b6613498a4e040a11ef3b4bf7e3d4c0a51021a706c9bd59"
     },
@@ -809,5 +819,5 @@
   ],
   "historyPolicy": "fresh public snapshot; no private ancestry or source author metadata",
   "schema": 1,
-  "sourceSHA": "9b74bddadf04a8a29cec840f2ee777e9fdbdc06a"
+  "sourceSHA": "f0fe8f0c101cc7583a3d2edd29acece4ab38e93c"
 }
