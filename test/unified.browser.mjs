@@ -66,6 +66,12 @@ try {
   assert.equal(await page.locator('aside select').count(), 0);
   assert.equal(await page.locator('.workspace-screen select[aria-label="Active agent"]').count(), 1);
   assert.ok(await page.locator('[data-agent-id="local"]').isVisible());
+  // Sidebar action rows, project rows and their disclosure chevrons are shadcn Buttons.
+  for (const name of ['＋ New project', 'Agents']) assert.match(await page.getByRole('button', { name, exact: true }).first().getAttribute('class'), /inline-flex.*rounded-md/, `${name} is a shadcn Button`);
+  const chevrons = page.locator('.workspace-disclosure');
+  assert.ok(await chevrons.count() > 0, 'fixture has project rows with a disclosure chevron');
+  assert.match(await chevrons.first().getAttribute('class'), /inline-flex.*rounded-md/, 'disclosure chevron is a shadcn Button');
+  for (const row of await page.locator('.workspace-tree summary > button:first-child').all()) { const classes = (await row.getAttribute('class')).split(' '); assert.ok(classes.includes('rounded-md') && classes.includes('justify-start') && classes.includes('min-h-[36px]') && classes.includes('hover:bg-accent'), `every project row is a shadcn ghost Button (${classes.slice(0, 6)})`); }
   await page.locator('[data-agent-id="che"]').waitFor({ state: 'visible' });
   assert.ok(await page.locator('[data-agent-id="che"]').isVisible());
   assert.equal(await page.getByRole('button', { name: 'Chats', exact: true }).count(), 0);

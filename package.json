@@ -1,6 +1,6 @@
 {
   "name": "@hayate-agent/webui",
-  "version": "0.2.9",
+  "version": "0.2.12",
   "private": true,
   "type": "module",
   "license": "Apache-2.0",

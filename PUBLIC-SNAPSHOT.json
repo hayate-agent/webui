@@ -1,5 +1,5 @@
 {
-  "contentDigest": "9859dcedf3d77c7c13ba697a111ec5541cf6268d8fe4f2ab95bad24d8863bc57",
+  "contentDigest": "4ac4308972f2d37418e3c32c3fec156f56639c1c23d256524bce9e6259430ad3",
   "files": [
     {
       "mode": "100644",
@@ -39,7 +39,7 @@
     {
       "mode": "100644",
       "path": "PUBLIC-SOURCE.json",
-      "sha256": "ebed41969f98b02bb63805c183382c9e8aee3209d18224d12ad58f9e8f26360d"
+      "sha256": "b9bdf1fef92faaf93216eaa2d68ddf21edde1837ca7271bd6e629c3ef890ca7f"
     },
     {
       "mode": "100644",
@@ -84,7 +84,7 @@
     {
       "mode": "100644",
       "path": "dashboard/public/chat-surface.css",
-      "sha256": "0ef3354c8e4007ab45484d0b98388bf8a7c689f03b7756b36860cc6c8128fcd6"
+      "sha256": "bf9c38f812954e88384dca51cae0f02f05c16340aec2529fc7a07608be139e6b"
     },
     {
       "mode": "100644",
@@ -189,7 +189,7 @@
     {
       "mode": "100644",
       "path": "dashboard/public/ui/button-class.js",
-      "sha256": "2a8685b473eca52f0646df0526a97fef01edb949ba2a752395f9d02e6944577a"
+      "sha256": "a6c439247e103675e08a32f0b08cfa2621f50aa8db1e7c8b5e03b135683022d1"
     },
     {
       "mode": "100644",
@@ -204,7 +204,7 @@
     {
       "mode": "100644",
       "path": "dashboard/public/ui/control-class.js",
-      "sha256": "93f92ea0f19018158451db0fb0868efb3d960060126e1836e5747100d5faf0a0"
+      "sha256": "c111ca4f30e82f284cfd9e204fcd7cb1dc58a4df64279d68778e0c1eb0cdd322"
     },
     {
       "mode": "100644",
@@ -230,6 +230,11 @@
       "mode": "100644",
       "path": "dashboard/public/ui/shadcn/LICENSE",
       "sha256": "1564074e13439397221ffd522e2e504d56561994a23d371aa5e3ad43e4f5423f"
+    },
+    {
+      "mode": "100644",
+      "path": "dashboard/public/ui/shadcn/alert.tsx",
+      "sha256": "2bb195ed68c5faa3ed0b78262db3f250105296700b3a8bd433e5d4545cf1e3e0"
     },
     {
       "mode": "100644",
@@ -279,12 +284,12 @@
     {
       "mode": "100644",
       "path": "dashboard/public/ui/shell.jsx",
-      "sha256": "25a5b471d4a2e931ea073b106e88c20cd2505170f67203ddd7989136535f0e11"
+      "sha256": "22be4035c2ba12d6368fb75d44c8df280a686fef1491be7ffe9d26a077a5bca4"
     },
     {
       "mode": "100644",
       "path": "dashboard/public/workspace-client.js",
-      "sha256": "e2c94c1a707dea5b2ec9f75688ee881df6dd8cca76018fbd5439770eb5a98821"
+      "sha256": "02c3d1e597f9fa5b04ff7e4c43a62d366f7a6acf71d92eaab52d4632d90ef7ff"
     },
     {
       "mode": "100644",
@@ -359,7 +364,7 @@
     {
       "mode": "100644",
       "path": "package.json",
-      "sha256": "921db9a74c1ec94ddbd4ed026e229f3ba8adc90a6a8882f6fe9607e6670a068e"
+      "sha256": "ee8d83f7b13b11ea145528ee8da48c1cfca999fee2823a969dcb589273441f45"
     },
     {
       "mode": "100644",
@@ -669,7 +674,7 @@
     {
       "mode": "100644",
       "path": "test/pi-main-chat.browser.mjs",
-      "sha256": "95dcce99538ae80b6fa12a4f4e59422c8039989bff20a407cdad0cff45fbbd71"
+      "sha256": "a521ed9c9fc8581b9b76e69b22a38afcf4067611bc358ad18260034ca5dcc2d7"
     },
     {
       "mode": "100644",
@@ -789,7 +794,7 @@
     {
       "mode": "100644",
       "path": "test/unified.browser.mjs",
-      "sha256": "bfff669f88e0f8927f058e1d0fae6a7f0deb1cbd014b2285108cab0d111f13ed"
+      "sha256": "cc22b7d5fee01ffc15529625325249fb879d3abc5a38019e0ef4a6ff4f35bc8a"
     },
     {
       "mode": "100644",
@@ -804,5 +809,5 @@
   ],
   "historyPolicy": "fresh public snapshot; no private ancestry or source author metadata",
   "schema": 1,
-  "sourceSHA": "84f7ad982822a7be63c3805cbfb834405fc5065c"
+  "sourceSHA": "9b74bddadf04a8a29cec840f2ee777e9fdbdc06a"
 }
