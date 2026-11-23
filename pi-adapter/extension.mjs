@@ -1,6 +1,11 @@
 import net from 'node:net';
 import { validatePromptImages } from './media.mjs';
 import { historyPage } from './history-page.mjs';
+import { OPENUI_GUIDE } from './openui-guide.mjs';
+
+// A session counts as shown in the WebUI while the bridge is connected, plus a grace period so a gateway
+// restart does not flip the system prompt (and lose the prompt cache) twice.
+export const GUIDE_GRACE_MS = 5 * 60 * 1000;
 import { lstatSync, readFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import path from 'node:path';
@@ -17,7 +22,7 @@ export function connectorDirectory(env = process.env, configFile = path.join(hom
 /** Thin connector only: the adapter daemon is a separate process. Reads the
  * user service config; PI_WEBUI_BRIDGE_DIR remains available for isolated tests. */
 export default function piWebUIConnector(pi) {
-  let socket, retry, active = false, context, promptReserved = false;
+  let socket, retry, active = false, context, promptReserved = false, connected = false, lastConnected = 0;
   pi.registerCommand('webui-reload-runtime', {
     description: 'Reload the native PI runtime from the authenticated WebUI bridge',
     handler: async (_args, ctx) => { await ctx.reload(); },
@@ -39,9 +44,10 @@ export default function piWebUIConnector(pi) {
       } catch { retry = setTimeout(connect, 5000); return; }
       const peer = net.createConnection(path.join(directory, 'owners.sock'));
       socket = peer; peer.setEncoding('utf8'); let buffer = '';
+      peer.on('connect', () => { connected = true; lastConnected = Date.now(); });
       peer.on('connect', () => send({ type: 'register', sessionId: ctx.sessionManager.getSessionId(), cwd: ctx.cwd, name: ctx.sessionManager.getSessionName(), features: ['reload-v1', 'history-page-v1', 'image-prompt-v1'] }));
       peer.on('error', () => {});
-      peer.on('close', () => { if (socket === peer) socket = undefined; if (active) retry = setTimeout(connect, 5000); });
+      peer.on('close', () => { if (socket === peer) { socket = undefined; if (connected) lastConnected = Date.now(); connected = false; } if (active) retry = setTimeout(connect, 5000); });
       peer.on('data', chunk => {
         buffer += chunk;
         if (Buffer.byteLength(buffer) > 8 * 1024 * 1024) return peer.destroy();
@@ -90,8 +96,15 @@ export default function piWebUIConnector(pi) {
     };
     connect();
   });
+  // Tell the agent the WebUI renders ```openui blocks. Only while this session is connected to the
+  // WebUI (otherwise the block would show as plain code), and never twice in one prompt.
+  pi.on('before_agent_start', event => {
+    const shown = active && (connected || lastConnected > 0 && Date.now() - lastConnected < GUIDE_GRACE_MS);
+    if (!shown || typeof event?.systemPrompt !== 'string' || event.systemPrompt.includes(OPENUI_GUIDE)) return;
+    return { systemPrompt: event.systemPrompt + '\n\n<webui_openui>\n' + OPENUI_GUIDE + '\n</webui_openui>' };
+  });
   for (const name of ['agent_start', 'agent_settled', 'message_start', 'message_update', 'message_end', 'tool_execution_start', 'tool_execution_update', 'tool_execution_end', 'session_info_changed', 'ui_prompt_start', 'ui_prompt_end']) {
     pi.on(name, event => { if (name === 'agent_settled') promptReserved = false; if (active && context) send({ type: 'event', event }); });
   }
-  pi.on('session_shutdown', () => { active = false; promptReserved = false; clearTimeout(retry); socket?.destroy(); socket = undefined; context = undefined; });
+  pi.on('session_shutdown', () => { active = false; connected = false; lastConnected = 0; promptReserved = false; clearTimeout(retry); socket?.destroy(); socket = undefined; context = undefined; });
 }
