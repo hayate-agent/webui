@@ -8,6 +8,7 @@ import { createSessionCard } from './ui/session-card.jsx';
 import { settleReceipts } from './receipts.js';
 import { renderContextMeter } from './ui/context-meter.jsx';
 import { rowButtonClass, headingButtonClass, iconButtonClass } from './ui/button-class.js';
+import { styleControl } from './ui/control-class.js';
 // Optional frontend projection. No project/agent/secret domain state is stored here.
 import { createLiveTransport } from './live-transport.js';
 import { discoverAgent } from './agent-discovery.js';
@@ -28,7 +29,7 @@ export async function mountWorkspace({ request, notice, markdown }) {
   const serverOffsetMs = Number.isFinite(capabilities.serverTime) ? capabilities.serverTime - (capabilitiesRequested + Date.now()) / 2 : 0;
   if (capabilities.workspaces !== 1) return;
   const $ = id => document.getElementById(id);
-  const node = (tag, text, cls) => { const e = document.createElement(tag); if (text !== undefined) e.textContent = text; if (cls) e.className = cls; return e; };
+  const node = (tag, text, cls) => { const e = document.createElement(tag); if (text !== undefined) e.textContent = text; if (cls) e.className = cls; return styleControl(e); };
   const run = fn => (...args) => Promise.resolve().then(() => fn(...args)).catch(e => notice(e.message));
   const button = (text, fn) => { const e = node('button', text); e.type = 'button'; e.title = text; e.onclick = run(fn); return e; };
   let state, projectId, streamId, events, visible = false;
@@ -787,7 +788,7 @@ export async function mountWorkspace({ request, notice, markdown }) {
       ['Settings', () => settingsDialog('stream', stream)],
       ['Details', () => conversationDetails(stream, state.agent)],
       ['Rename chat', () => formDialog('Rename chat', (form, d) => {
-        const name = document.createElement('input'); name.value = stream.title; name.required = true; name.maxLength = 160; name.setAttribute('aria-label', 'Chat name'); form.append(name);
+        const name = styleControl(document.createElement('input')); name.value = stream.title; name.required = true; name.maxLength = 160; name.setAttribute('aria-label', 'Chat name'); form.append(name);
         return async () => { await change('streams', stream.id, { title: name.value.trim() }); d.close(); };
       })],
       ['Fork chat', () => forkChat(stream)],
@@ -871,12 +872,12 @@ export async function mountWorkspace({ request, notice, markdown }) {
     }]);
     // PI hosts rename through their native session name (pi-chats), not the generic streams action.
     if (agent?.features?.includes('pi-chat-bindings') && !agent.features.includes('rename-streams')) items.push(['Rename chat', () => formDialog('Rename chat', (form, d) => {
-      const name = document.createElement('input'); name.value = stream.title; name.required = true; name.maxLength = 160; name.setAttribute('aria-label', 'Chat name'); form.append(name);
+      const name = styleControl(document.createElement('input')); name.value = stream.title; name.required = true; name.maxLength = 160; name.setAttribute('aria-label', 'Chat name'); form.append(name);
       form.append(node('p', 'Updates the name in PI. Messages and session stay unchanged.', 'workspace-context'));
       return async () => { await peerRequest(agentId, 'messages', { action: 'pi-chats', operation: 'rename', sessionId: stream.id, name: name.value.trim() }); d.close(); await showAgentStreams(agentId); if (remoteSelection?.streamId === stream.id) headingText.textContent = name.value.trim(); };
     })]);
     if (agent?.features?.includes('rename-streams')) items.push(['Rename chat', () => formDialog('Rename chat', (form, d) => {
-      const name = document.createElement('input'); name.value = stream.title; name.required = true; name.maxLength = 160; name.setAttribute('aria-label', 'Chat name'); form.append(name);
+      const name = styleControl(document.createElement('input')); name.value = stream.title; name.required = true; name.maxLength = 160; name.setAttribute('aria-label', 'Chat name'); form.append(name);
       return async () => { await peerRequest(agentId, 'streams', { action: 'rename', streamId: stream.id, title: name.value.trim() }); d.close(); await showAgentStreams(agentId); };
     })]);
     if (agent?.features?.includes('organize-streams')) {

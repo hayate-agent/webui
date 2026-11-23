@@ -1,15 +1,16 @@
 import React, { useEffect, useRef } from 'react';
 import { createRoot } from 'react-dom/client';
 import { Menu } from '@base-ui/react/menu';
+import { MenuContent, MenuItem } from './shadcn/menu';
 
 function ActionPopup({ anchor, items, dispose, onError }) {
   const ref = useRef(null);
   useEffect(() => { ref.current?.querySelector('[role="menuitem"]')?.focus(); }, []);
-  return <Menu.Popup ref={ref} className="workspace-menu ui-action-menu" finalFocus={() => anchor}>
-    {items.map(([label, action]) => <Menu.Item key={label} className={label.startsWith('Delete') ? 'danger' : undefined} onClick={() => {
+  return <MenuContent ref={ref} className="workspace-menu ui-action-menu" finalFocus={() => anchor}>
+    {items.map(([label, action]) => <MenuItem key={label} destructive={label.startsWith('Delete')} onClick={() => {
       dispose(); Promise.resolve().then(action).catch(onError);
-    }}>{label}</Menu.Item>)}
-  </Menu.Popup>;
+    }}>{label}</MenuItem>)}
+  </MenuContent>;
 }
 // Shared accessible primitive: Base UI owns focus, keyboard navigation,
 // dismissal and viewport collision handling, not hand-written menu logic.

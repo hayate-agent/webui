@@ -2,6 +2,7 @@ import React from 'react';
 import { createRoot } from 'react-dom/client';
 import { flushSync } from 'react-dom';
 import { Button } from './shadcn/button';
+import { NativeSelect } from './shadcn/native-select';
 
 // Uncontrolled editor deliberately retains browser selection/IME and the existing
 // per-conversation draft controller. React owns the component structure.
@@ -17,11 +18,11 @@ export function createComposer() {
       <div className="ui-composer-toolbar">
         <label className="ui-delivery-label" ref={element => { refs.modeLabel = element; }}>
           <span className="sr-only">Delivery</span>
-          <select aria-label="PI delivery mode" defaultValue="steer" ref={element => { refs.piMode = element; }}>
+          <NativeSelect aria-label="PI delivery mode" defaultValue="steer" ref={element => { refs.piMode = element; }}>
             <option value="steer">Steer current work</option>
             <option value="followUp">Follow up</option>
             <option value="">Send when idle</option>
-          </select>
+          </NativeSelect>
         </label>
         <Button variant="outline" type="button" ref={element => { refs.attach = element; }} aria-label="Attach images">Bild anhängen</Button>
         <span className="ui-composer-hint">Enter to send · Shift + Enter for a new line</span>

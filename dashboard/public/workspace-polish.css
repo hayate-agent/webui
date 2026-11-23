@@ -30,12 +30,8 @@ body .ui-library-dialog{position:fixed;top:50%;left:50%;transform:translate(-50%
 .ui-dialog-content form{display:grid;gap:16px}
 .ui-dialog-content label{display:grid;gap:5px}
 .ui-dialog-content section.agent-card{margin:10px 0}
-body .ui-action-menu{position:relative;inset:auto;display:flex;flex-direction:column;min-width:210px;outline:none}
-body .ui-action-menu [role=menuitem]{padding:9px 12px;font-size:13px;border-radius:6px;cursor:default;outline:none}
-body .ui-action-menu [data-highlighted]{background:var(--user)}
-body .ui-action-menu .danger{color:var(--danger)}
 body:has(.workspace-screen:not([hidden])){grid-template-columns:288px minmax(0,1fr)}
-body:has(.workspace-screen:not([hidden]))>aside{padding:24px 14px 16px;gap:14px}
+body:has(.workspace-screen:not([hidden])) aside{padding:24px 14px 16px;gap:14px}
 body:has(.workspace-screen:not([hidden])) #new{background:var(--accent);color:var(--bg);border:0;text-align:left;font-weight:600;padding:11px 14px;border-radius:12px}
 body:has(.workspace-screen:not([hidden])) #search{font-size:13px;border-color:transparent;background:var(--bg);padding:10px 12px}
 body .workspace-screen{padding:0 clamp(24px,4vw,64px);background:var(--bg)}
@@ -68,9 +64,7 @@ body .workspace-dialog .agent-card{padding:16px;margin:10px 0;border-radius:12px
 body .workspace-dialog .agent-card h3{font-size:14px;padding:0;margin-bottom:6px}
 body .workspace-dialog .agent-card .workspace-context{white-space:pre-line;display:-webkit-box;-webkit-line-clamp:5;-webkit-box-orient:vertical;overflow:hidden;font-size:12px}
 body .workspace-dialog .agent-card button{font-size:12px;margin:10px 8px 0 0}
-body .workspace-menu{padding:6px;border-radius:12px;box-shadow:0 8px 28px #0002}
-body .workspace-menu button{font-size:13px;padding:9px 12px}
 body .workspace-screen button:active,body .workspace-dialog button:active{transform:scale(.98)}
 @media(hover:hover) and (pointer:fine){body .workspace-stream-row>button:last-child{opacity:.5}body .workspace-stream-row:hover>button:last-child,body .workspace-stream-row:focus-within>button:last-child{opacity:1}}
-@media(max-width:760px){body:has(.workspace-screen:not([hidden])){grid-template-columns:1fr}body:has(.workspace-screen:not([hidden]))>aside{padding:10px 16px;gap:8px}body .workspace-screen{padding:0 16px}body .workspace-screen h1{font-size:18px}body .workspace-screen>header{grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:10px;padding:14px 0}body .workspace-screen>header>h1{grid-column:1;max-width:100%}body .workspace-screen>header>button{grid-column:2;grid-row:1}body .workspace-screen .agent-picker{grid-row:2}body .workspace-screen select{max-width:100%;width:100%}body .workspace-content{padding-top:20px}body .workspace-composer{margin-bottom:12px}body .workspace-dialog{padding:18px}}
+@media(max-width:760px){body:has(.workspace-screen:not([hidden])){grid-template-columns:1fr}body:has(.workspace-screen:not([hidden])) aside{padding:10px 16px;gap:8px}body .workspace-screen{padding:0 16px}body .workspace-screen h1{font-size:18px}body .workspace-screen>header{grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:10px;padding:14px 0}body .workspace-screen>header>h1{grid-column:1;max-width:100%}body .workspace-screen>header>button{grid-column:2;grid-row:1}body .workspace-screen .agent-picker{grid-row:2}body .workspace-screen select{max-width:100%;width:100%}body .workspace-content{padding-top:20px}body .workspace-composer{margin-bottom:12px}body .workspace-dialog{padding:18px}}
 @media(prefers-reduced-motion:reduce){body .workspace-screen button:active,body .workspace-dialog button:active{transform:none}}
