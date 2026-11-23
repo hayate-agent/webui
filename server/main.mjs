@@ -1,13 +1,16 @@
 import { readFile } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
 import { createDashboard } from './server.mjs';
+import { dashboardToolsFromEnvironment } from './dashboard-config.mjs';
 const origin = process.env.HAYATE_DASHBOARD_ORIGIN ?? 'http://127.0.0.1:3210';
 const upstream = process.env.HAYATE_AGENT_URL;
 if (!upstream) throw Error('Set HAYATE_AGENT_URL to the existing agent API origin');
 const tls = origin.startsWith('https:') ? {
   key: await readFile(process.env.HAYATE_TLS_KEY_FILE), cert: await readFile(process.env.HAYATE_TLS_CERT_FILE),
 } : undefined;
-const dashboard = await createDashboard({ origin, upstream, tls, piUpstream: process.env.PI_WEBUI_ADAPTER_URL,
+const tools = dashboardToolsFromEnvironment();
+if (tools.warning) console.warn(tools.warning);
+const dashboard = await createDashboard({ origin, upstream, tls, piUpstream: process.env.PI_WEBUI_ADAPTER_URL, dashboardTools: tools.mode,
   host: process.env.HAYATE_DASHBOARD_HOST ?? '127.0.0.1',
   upstreamServername: process.env.HAYATE_AGENT_TLS_NAME,
   upstreamOrigin: process.env.HAYATE_AGENT_ORIGIN,

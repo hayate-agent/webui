@@ -16,7 +16,9 @@ async function scan(directory) {
 await scan('dashboard/public/ui');
 const compiler = await compile(await readFile('dashboard/public/components.css', 'utf8'), { base: resolve('dashboard/public'), onDependency() {} });
 await writeFile('dist/public/components.css', compiler.build([...candidates]));
-await build({ entryPoints: ['dashboard/public/app.js'], bundle: true, jsx: 'automatic', format: 'esm', minify: true, outfile: 'dist/public/app.js' });
+// app.js must stay small: the dashboard bundle (OpenUI + zod) is loaded on demand from /dashboard.js.
+await build({ entryPoints: ['dashboard/public/app.js'], bundle: true, jsx: 'automatic', format: 'esm', minify: true, outfile: 'dist/public/app.js', external: ['/dashboard.js'] });
+await build({ entryPoints: ['dashboard/public/dashboard-entry.js'], bundle: true, jsx: 'automatic', format: 'esm', minify: true, outfile: 'dist/public/dashboard.js' });
 await copyFile('dashboard/public/index.html', 'dist/public/index.html');
 // The running version is read back from the served bundle, never from a manifest:
 // `<package version>+<commit count>.<short revision>`, counting up with every commit.

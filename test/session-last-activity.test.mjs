@@ -13,7 +13,7 @@ async function fixture({ renew = async () => {} } = {}) {
     createElement: () => ({}), querySelector: () => ({ append: (...nodes) => nodes.forEach(node => elements.set(node.id, node)) }),
     addEventListener: (type, listener) => listeners.set(type, listener) };
   const source = (await readFile(new URL('../dashboard/public/auth-client.js', import.meta.url), 'utf8'))
-    .replaceAll('export async function', 'async function');
+    .replaceAll('export async function', 'async function').replaceAll('export function', 'function');
   const context = vm.createContext({ document, sessionStorage: {}, location: { reload: () => { reloads++; } }, Date: { now: () => now },
     setTimeout: (callback, delay) => { const id = ++timerId; timers.set(id, { callback, at: now + delay }); return id; },
     clearTimeout: id => timers.delete(id),
@@ -25,11 +25,11 @@ async function fixture({ renew = async () => {} } = {}) {
       }
       return { ok: true, json: async () => ({ required: true, authenticated: true, expiresAt }) };
     } });
-  vm.runInContext(source + '\nglobalThis.start = authenticate;', context);
+  vm.runInContext(source + '\nglobalThis.start = authenticate; globalThis.signOut = signOut;', context);
   await context.start();
   return {
     listeners, document,
-    logout: () => elements.get('sign-out').onclick(),
+    logout: () => context.signOut(),
     get reloads() { return reloads; },
     get now() { return now; }, get expiresAt() { return expiresAt; }, get renewals() { return renewals; },
     async event(type) { await listeners.get(type)?.({ isTrusted: true }); },

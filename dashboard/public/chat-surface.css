@@ -14,7 +14,7 @@ body .workspace-screen>header{background:var(--bg);padding:16px 24px;border-bott
 body .workspace-screen>header .agent-picker{width:100%;max-width:170px;justify-self:end}
 body .workspace-screen>header .agent-picker select{width:100%;max-width:170px;min-width:0;text-overflow:ellipsis;padding:5px 8px;font-size:12px}
 body .workspace-screen>header>button{width:36px;max-width:36px;padding:4px;justify-self:end}
-body .workspace-tree .workspace-stream-row{display:grid;grid-template-columns:minmax(0,1fr) 32px;align-items:start;margin-left:4px}
+body .workspace-tree .workspace-stream-row{display:grid;grid-template-columns:minmax(0,1fr) 36px;align-items:start;margin-left:4px}
 body .workspace-tree .workspace-stream-row>button:first-child{display:-webkit-box;width:100%;min-width:0;white-space:normal;overflow-wrap:anywhere;line-height:1.45;-webkit-line-clamp:3;-webkit-box-orient:vertical;padding:8px 10px;text-align:left}
 body .workspace-tree .workspace-agent-heading{white-space:normal;overflow-wrap:anywhere;text-align:left;line-height:1.4}
 body .workspace-tree summary>button:first-child{-webkit-line-clamp:3;white-space:normal}
@@ -70,7 +70,9 @@ body .workspace-content,body .ui-chat-message{position:relative}
 .ui-app-footer{flex:none;padding:2px 16px 8px;text-align:center;font:11px/1.4 ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--muted)}
 [data-webui-version]{user-select:all}
 body .workspace-content{overscroll-behavior:contain}
-body .workspace-tree{overscroll-behavior:contain}
+body .workspace-tree{overscroll-behavior:contain;overflow-x:hidden}
+/* Base UI positions the Positioner; the legacy `.workspace-menu{position:fixed}` must not pull the popup out of it (it broke end-aligned menus). */
+body .ui-action-menu{position:relative}
 
 /* PI-like tool box: call line and result form one tinted panel; success/failure tint the result, palette variables preserved. */
 body .workspace-content .tui-tool{background:color-mix(in srgb,var(--text) 7%,transparent);border-radius:6px 6px 0 0;padding:6px 10px;margin:10px 0 0}

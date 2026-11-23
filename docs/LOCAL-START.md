@@ -5,7 +5,7 @@
 From this checkout:
 
 ```sh
-npm ci
+npm ci --ignore-scripts
 npm run build
 HAYATE_AGENT_URL=https://YOUR-EXISTING-HAYATE-API \
 PI_WEBUI_ROOTS="$HOME/Work/Development" \

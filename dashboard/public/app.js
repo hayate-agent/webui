@@ -1,9 +1,12 @@
+import { isOpenUIFence, mountOpenUIBlock } from './openui-block.js';
+import { confirmDashboardWrite } from './ui/dashboard/confirm.jsx';
 import { mountBeautifulCode } from './ui/beautiful-code.jsx';
 import { mountShell } from './ui/shell.jsx';
 import { marked } from 'marked';
 import DOMPurify from 'dompurify';
 import { mountWorkspace } from './workspace-client.js';
 import { authenticate, checkIdentity } from './auth-client.js';
+import { createAccountMenu } from './account-menu.js';
 import { styleAuthDialogs } from './auth-style.js';
 import { mountPi } from './pi-client.js';
 import { setupMobileNavigation } from './mobile-nav.js';
@@ -55,7 +58,8 @@ async function copy(text, node) {
   node.textContent = 'Copied';
   setTimeout(() => { if (node.isConnected) node.textContent = 'Copy'; }, 1400);
 }
-function markdown(text) {
+// `live: false` (user text) keeps ```openui as plain code: only assistant output may become live UI.
+function markdown(text, { live = true } = {}) {
   const body = element('div', undefined, 'body');
   // No raw HTML, images, SVG, styles, event handlers or model-defined UI controls.
   const html = marked.parse(text, { async: false });
@@ -73,6 +77,10 @@ function markdown(text) {
   }
   for (const pre of body.querySelectorAll('pre')) {
     const code = pre.querySelector('code');
+    if (live && isOpenUIFence(code)) {
+      mountOpenUIBlock(pre, code.textContent, { confirm: confirmDashboardWrite, showCode: (host, source) => { const stand = document.createElement('pre'); const inner = document.createElement('code'); inner.textContent = source; stand.append(inner); host.append(stand); mountBeautifulCode(stand, 'openui'); } });
+      continue;
+    }
     mountBeautifulCode(pre, code?.className.replace(/^language-/, '') || 'Code');
   }
   return body;
@@ -253,6 +261,8 @@ async function init() {
   // Reachable on every path (legacy or workspace): the drawer is the only conversation list on mobile.
   setupMobileNavigation([document.querySelector('main > header')]);
   if (state.backends?.workspaces === 1 && await mountWorkspace({ request, notice, markdown })) return;
+  // Legacy view: the same profile menu, in its own header (the workspace header has one of its own).
+  const legacyAccount = createAccountMenu(notice); if (legacyAccount) document.querySelector('main > header .actions')?.append(legacyAccount);
   const previous = sessionStorage.getItem('hayate.webui.chat');
   if (list.length) await select(list.some(c => c.id === previous) ? previous : list[0].id);
   else await newChat();

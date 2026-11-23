@@ -1,6 +1,6 @@
 {
   "name": "@hayate-agent/webui",
-  "version": "0.2.13",
+  "version": "0.2.25",
   "private": true,
   "type": "module",
   "license": "Apache-2.0",
@@ -14,7 +14,7 @@
   "scripts": {
     "build": "node scripts/build.mjs",
     "test": "node --test test/*.test.mjs",
-    "test:browser": "node test/browser.mjs && node test/unified.browser.mjs && node test/sidebar.browser.mjs && node test/pi.browser.mjs && node test/pi-main-chat.browser.mjs && node test/image-display.browser.mjs && node test/local-image-display.browser.mjs && node test/elapsed.browser.mjs && node test/history-viewport.browser.mjs && node test/history-scroll-stability.browser.mjs && node test/history-blank-space.browser.mjs && node test/navigation-cache.browser.mjs && node test/live-browser.mjs && node test/media-drafts.browser.mjs && node test/mobile-layout.browser.mjs && node test/command-browser.mjs",
+    "test:browser": "node test/browser.mjs && node test/unified.browser.mjs && node test/sidebar.browser.mjs && node test/sidebar-footer.browser.mjs && node test/pi.browser.mjs && node test/pi-main-chat.browser.mjs && node test/image-display.browser.mjs && node test/local-image-display.browser.mjs && node test/elapsed.browser.mjs && node test/history-viewport.browser.mjs && node test/history-scroll-stability.browser.mjs && node test/history-blank-space.browser.mjs && node test/navigation-cache.browser.mjs && node test/live-browser.mjs && node test/media-drafts.browser.mjs && node test/mobile-layout.browser.mjs && node test/command-browser.mjs && node test/dashboard-spike.browser.mjs && node test/dashboard-chunk.browser.mjs && node test/openui-block.browser.mjs && node test/dashboard-tools.browser.mjs && node test/login.browser.mjs",
     "start": "node server/main.mjs",
     "start:local": "node scripts/start-local.mjs",
     "pi:console": "node pi-adapter/console.mjs",
@@ -25,6 +25,7 @@
   },
   "dependencies": {
     "@base-ui/react": "1.9.0",
+    "@openuidev/react-lang": "1.1.1",
     "@radix-ui/react-slot": "1.5.0",
     "class-variance-authority": "0.7.1",
     "clsx": "2.1.1",
@@ -34,7 +35,8 @@
     "react-dom": "19.3.1",
     "sharp": "0.35.5",
     "tailwind-merge": "3.7.0",
-    "ws": "^8.23.0"
+    "ws": "^8.23.0",
+    "zod": "4.6.7"
   },
   "devDependencies": {
     "@tailwindcss/node": "4.3.5",

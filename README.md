@@ -10,7 +10,7 @@ identity, workspaces, credentials, pairing and durable message acceptance.
 Requires Node >=22.19:
 
 ```sh
-npm ci
+npm ci --ignore-scripts
 npm run build
 HAYATE_AGENT_URL=https://agent.example.org \
 HAYATE_DASHBOARD_ORIGIN=http://127.0.0.1:3210 npm start

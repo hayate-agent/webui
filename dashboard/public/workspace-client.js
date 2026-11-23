@@ -9,6 +9,7 @@ import { settleReceipts } from './receipts.js';
 import { renderContextMeter } from './ui/context-meter.jsx';
 import { rowButtonClass, headingButtonClass, iconButtonClass, actionRowClass, disclosureClass } from './ui/button-class.js';
 import { styleControl, styleAlert } from './ui/control-class.js';
+import { createAccountMenu } from './account-menu.js';
 // Optional frontend projection. No project/agent/secret domain state is stored here.
 import { createLiveTransport } from './live-transport.js';
 import { discoverAgent } from './agent-discovery.js';
@@ -20,6 +21,7 @@ import { appendNewer, prependOlder } from './history-window.js';
 import { createChatCache } from './chat-cache.js';
 import { createNavigation } from './navigation.js';
 import { createImageLoader, hydrateImages } from './image-loader.js';
+import { withDashboardContext } from './dashboard-context.js';
 export { discoverAgent };
 
 export async function mountWorkspace({ request, notice, markdown }) {
@@ -84,6 +86,7 @@ export async function mountWorkspace({ request, notice, markdown }) {
   const chatContext = node('p', '', 'workspace-context'); chatContext.hidden = true;
   const headingIdentity = node('div', undefined, 'chat-heading-identity'); const meterSlot = node('div', undefined, 'chat-heading-meter'); headingIdentity.append(headingText, chatContext, meterSlot);
   const headingControls = node('div', undefined, 'chat-heading-controls'); headingControls.append(agentLabel, projectLabel, menu);
+  const accountMenu = createAccountMenu(message => notice(message)); if (accountMenu) headingControls.append(accountMenu);
   heading.append(headingIdentity, headingControls);
   projectPicker.onchange = run(() => selectProject(projectPicker.value || undefined));
   const errorBox = styleAlert(node('p', '', 'workspace-error')); errorBox.setAttribute('role', 'alert'); errorBox.hidden = true;
@@ -271,6 +274,7 @@ export async function mountWorkspace({ request, notice, markdown }) {
     const more = button('⋮', event => popup(event, [
       ...(agentId && source.features?.includes('pi-chat-bindings') ? [['Select PI sessions…', () => selectPiSessions(agentId)]] : []),
       ...(agentId ? [['Refresh chats', () => showAgentStreams(agentId)]] : []),
+      ...(agentId && agentRoster.find(item => item.id === agentId)?.features?.includes('stream-lifecycle-v1') ? [['Archived / removed chats…', () => restoreRemoteChats(agentId, source)]] : []),
       ['New chat', () => newAgentChat(agentId ?? 'local')],
       ['Hide agent from sidebar', () => setAgentHidden(agentId ?? 'local', true)],
     ])); more.setAttribute('aria-label', `${source.features?.includes('pi-chat-bindings') ? 'Actions' : 'Settings'} for agent ${name}`);
@@ -555,7 +559,8 @@ export async function mountWorkspace({ request, notice, markdown }) {
         else { const editor = node('textarea'); editor.value = question.prefill ?? ''; editor.placeholder = question.placeholder ?? ''; editor.setAttribute('aria-label', question.title ?? 'Answer PI'); field.append(editor, button('Answer PI', () => answer({ value: editor.value }))); }
         field.append(button('Cancel question', () => answer({ cancelled: true }))); fragment.append(field);
       }
-      const renderMessage = message => { const row = renderChatMessage(message, expanded, markdown); hydrateImages(row, imageLoader, { agentId: selection.agentId, streamId: selection.streamId }); return row; };
+      // openui blocks in this conversation talk to THIS agent only (read at mount, synchronously inside markdown()).
+      const renderMessage = message => { const row = withDashboardContext({ agentId: selection.agentId, streamId: selection.streamId, request: (capability, input) => peerRequest(selection.agentId, capability, input) }, () => renderChatMessage(message, expanded, markdown)); hydrateImages(row, imageLoader, { agentId: selection.agentId, streamId: selection.streamId }); return row; };
       const loadEarlier = async () => {
         if (!selection.before || selection.loadingEarlier) return;
         selection.loadingEarlier = true;
@@ -847,6 +852,16 @@ export async function mountWorkspace({ request, notice, markdown }) {
       search.focus();
     });
   }
+  function restoreRemoteChats(agentId, source) {
+    const gone = source.streams.filter(item => item.archived || item.deleted);
+    dialog('Archived / removed chats', list => {
+      if (!gone.length) list.append(node('p', 'Nothing archived or removed.', 'workspace-context'));
+      for (const item of gone) list.append(button(`Restore ${item.title}${item.deleted ? ' (removed)' : ' (archived)'}`, async () => {
+        await peerRequest(agentId, 'streams', { action: 'lifecycle', streamId: item.id, archived: false, deleted: false });
+        list.close(); await showAgentStreams(agentId);
+      }));
+    });
+  }
   function remoteStreamMenu(stream, event, agentId = browsingAgent, source = peerState) {
     const move = async projectId => {
       await peerRequest(agentId, 'streams', { action: 'move', streamId: stream.id, projectId });
@@ -885,6 +900,15 @@ export async function mountWorkspace({ request, notice, markdown }) {
       for (const project of source.projects.filter(p => !p.deleted && !p.archived && p.id !== stream.projectId)) items.push([`Move to ${project.title}`, () => move(project.id)]);
       if (stream.projectId && agent.features.includes('standalone-chats')) items.push(['Remove from project', () => move(null)]);
     }
+    // Hayate agents: archive / remove are flags on the agent (history stays, work keeps running); restore lives in the agent menu.
+    if (agent?.features?.includes('stream-lifecycle-v1')) for (const [label, flags, question] of [
+      ['Archive chat', { archived: true }, undefined],
+      ['Remove chat (recoverable)', { deleted: true }, 'Remove this chat from the list? History is kept on the agent and work is not cancelled.']]) items.push([label, async () => {
+      if (question && !confirm(question)) return;
+      await peerRequest(agentId, 'streams', { action: 'lifecycle', streamId: stream.id, ...flags });
+      if (remoteSelection?.agentId === agentId && remoteSelection.streamId === stream.id) { clearRemote(); streamId = undefined; }
+      await showAgentStreams(agentId);
+    }]);
     items.push(['Hide chat from sidebar', () => setAgentHidden(hideKey('chat', agentId, stream.id), true)]);
     popup(event, items);
   }

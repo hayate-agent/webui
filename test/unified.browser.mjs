@@ -32,6 +32,7 @@ const backend = createServer(async (req, res) => {
     if (capability === 'streams' && action.action === 'create') { const chat = { id: 'remote-created', projectId: action.projectId, title: action.title, updatedAt: 100, messages: [], cwd: '/remote' }; peer.streams.push(chat); return json(chat); }
     if (capability === 'streams' && action.action === 'rename') { const chat = peer.streams.find(s => s.id === action.streamId); chat.title = action.title; return json(chat); }
     if (capability === 'streams' && action.action === 'fork') { const source = peer.streams.find(s => s.id === action.streamId); const fork = { ...structuredClone(source), id: 'peer-fork', title: `${source.title} (fork)` }; peer.streams.push(fork); return json(fork); }
+    if (capability === 'streams' && action.action === 'lifecycle') { const chat = peer.streams.find(s => s.id === action.streamId); for (const key of ['archived', 'deleted']) if (action[key] !== undefined) chat[key] = action[key]; return json({ archived: chat.archived === true, deleted: chat.deleted === true }); }
     if (capability === 'streams' && action.action === 'move') { peer.streams.find(s => s.id === action.streamId).projectId = action.projectId; return json({ moved: true }); }
     if (capability === 'messages' && action.action === 'media-chunk') return json({ id: 'fixture-image', sha256: 'a'.repeat(64), size: 100 });
     if (capability === 'messages' && action.action === 'read') return json(peer.streams.find(s => s.id === action.streamId));
@@ -195,6 +196,39 @@ try {
   await page.getByRole('button', { name: 'Save', exact: true }).click();
   await page.getByRole('button', { name: 'Remote renamed', exact: true }).waitFor();
   assert.equal(peer.streams[0].title, 'Remote renamed');
+  // Archive / remove / restore on a Hayate agent: only offered when the agent says it can, flags only.
+  const created = peer.streams.find(s => s.id === 'remote-created');
+  await page.getByLabel('Settings for New remote conversation', { exact: true }).click();
+  assert.equal(await page.getByRole('menuitem', { name: 'Archive chat', exact: true }).count(), 0, 'old agents without stream-lifecycle-v1 get no archive entry');
+  await page.keyboard.press('Escape');
+  peer.features.push('stream-lifecycle-v1');
+  await page.getByRole('button', { name: 'Che', exact: true }).click();
+  await page.getByLabel('Settings for New remote conversation', { exact: true }).click();
+  await page.getByRole('menuitem', { name: 'Archive chat', exact: true }).click();
+  await page.waitForFunction(() => ![...document.querySelectorAll('.workspace-stream-row')].some(e => e.textContent.includes('New remote conversation')));
+  assert.equal(created.archived, true); assert.ok(!created.deleted); assert.equal(created.messages.length, 1, 'history stays');
+  await page.getByLabel('Actions for agent Che', { exact: true }).or(page.getByLabel('Settings for agent Che', { exact: true })).click();
+  await page.getByRole('menuitem', { name: 'Archived / removed chats…', exact: true }).click();
+  await page.getByRole('button', { name: 'Restore New remote conversation (archived)', exact: true }).click();
+  await page.getByRole('button', { name: 'New remote conversation', exact: true }).waitFor();
+  assert.equal(created.archived, false);
+  // Remove asks first: cancelling changes nothing.
+  page.once('dialog', d => d.dismiss());
+  await page.getByLabel('Settings for New remote conversation', { exact: true }).click();
+  await page.getByRole('menuitem', { name: 'Remove chat (recoverable)', exact: true }).click();
+  await page.getByRole('button', { name: 'New remote conversation', exact: true }).waitFor();
+  assert.ok(!created.deleted, 'cancelled removal changes nothing');
+  page.once('dialog', d => d.accept());
+  await page.getByLabel('Settings for New remote conversation', { exact: true }).click();
+  await page.getByRole('menuitem', { name: 'Remove chat (recoverable)', exact: true }).click();
+  await page.waitForFunction(() => ![...document.querySelectorAll('.workspace-stream-row')].some(e => e.textContent.includes('New remote conversation')));
+  assert.equal(created.deleted, true);
+  // Restore brings a removed chat back too (both flags cleared).
+  await page.getByLabel('Settings for agent Che', { exact: true }).or(page.getByLabel('Actions for agent Che', { exact: true })).click();
+  await page.getByRole('menuitem', { name: 'Archived / removed chats…', exact: true }).click();
+  await page.getByRole('button', { name: 'Restore New remote conversation (removed)', exact: true }).click();
+  await page.getByRole('button', { name: 'New remote conversation', exact: true }).waitFor();
+  assert.equal(created.deleted, false); assert.equal(created.archived, false);
   await page.getByLabel('Settings for Remote renamed', { exact: true }).click();
   await page.getByRole('menuitem', { name: 'Fork chat', exact: true }).click();
   await page.waitForFunction(() => document.querySelector('.workspace-screen h1')?.textContent === 'Remote renamed (fork)');

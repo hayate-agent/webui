@@ -1,4 +1,4 @@
-let signingIn;
+let signingIn, accountAvailable = false;
 let renewalEnabled = false, renewing = false, nextRenewal = 0;
 let renewalTimer, pendingActivity = false;
 function cancelPendingRenewal() {
@@ -39,20 +39,7 @@ export async function authenticate(force = false) {
   const status = await call('/api/auth');
   if (signingIn) return signingIn;
   if (!status.required) return;
-  if (!document.getElementById('sign-out')) {
-    const logout = document.createElement('button'); logout.id = 'sign-out'; logout.textContent = 'Sign out';
-    logout.onclick = async () => {
-      renewalEnabled = false; cancelPendingRenewal(); logout.disabled = true;
-      try {
-        await call('/api/auth/logout', {});
-        for (const key of Object.keys(sessionStorage)) if (key.startsWith('workspace.') || key.startsWith('hayate.webui.')) sessionStorage.removeItem(key);
-        location.reload();
-      } catch { renewalEnabled = true; logout.disabled = false; logout.textContent = 'Sign out failed · retry'; }
-    };
-    const settings = document.createElement('button'); settings.id = 'account-settings'; settings.textContent = 'Account settings';
-    settings.onclick = () => { void accountSettings().catch(error => { settings.textContent = error.message; }); };
-    document.querySelector('aside').append(settings, logout);
-  }
+  accountAvailable = true;
   renewalEnabled = status.authenticated && !force;
   if (renewalEnabled) return;
   cancelPendingRenewal();
@@ -83,7 +70,18 @@ export async function authenticate(force = false) {
   }).finally(() => { signingIn = undefined; });
   return signingIn;
 }
-async function accountSettings() {
+/** True once the server reported that sign-in is required, i.e. there is an account to manage. */
+export function hasAccount() { return accountAvailable; }
+/** Ends the session on the server and reloads. A failure is thrown to the caller (the menu shows it). */
+export async function signOut() {
+  renewalEnabled = false; cancelPendingRenewal();
+  try {
+    await call('/api/auth/logout', {});
+    for (const key of Object.keys(sessionStorage)) if (key.startsWith('workspace.') || key.startsWith('hayate.webui.')) sessionStorage.removeItem(key);
+    location.reload();
+  } catch { renewalEnabled = true; throw Error('Sign out failed · try again'); }
+}
+export async function accountSettings() {
   const account = await call('/api/auth/account');
   const dialog = document.createElement('dialog'); dialog.className = 'account-dialog';
   const form = document.createElement('form');
