@@ -2,10 +2,18 @@ import React, { useLayoutEffect, useRef } from 'react';
 import { createRoot } from 'react-dom/client';
 import { flushSync } from 'react-dom';
 import { Dialog } from '@base-ui/react/dialog';
+import { styleDialogControls } from './control-class.js';
 
 function Content({ content }) {
   const host = useRef(null);
-  useLayoutEffect(() => { host.current.append(content); }, [content]);
+  useLayoutEffect(() => {
+    host.current.append(content);
+    // Controls the builders create imperatively get their shadcn classes whenever the content changes.
+    styleDialogControls(content);
+    const observer = new MutationObserver(() => styleDialogControls(content));
+    observer.observe(content, { childList: true, subtree: true });
+    return () => observer.disconnect();
+  }, [content]);
   return <div ref={host} className="ui-dialog-content" />;
 }
 // Compatibility boundary while individual forms move to React components.

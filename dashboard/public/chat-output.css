@@ -1,13 +1,13 @@
 /* Shared PI/Hayate transcript presentation; palette stays in style.css. */
 body .workspace-content{padding-top:36px}
 body .workspace-content .body{font-size:15px;line-height:1.8;letter-spacing:.002em}
-body .workspace-content .body>p{margin:0 0 16px}
-body .workspace-content .body>:last-child{margin-bottom:0}
+body .workspace-content .body p{margin:0 0 16px}
+body .workspace-content .body :last-child{margin-bottom:0}
 body .workspace-content .body h1{font-size:25px;line-height:1.3;white-space:normal;overflow:visible;margin:28px 0 14px;letter-spacing:-.035em}
 body .workspace-content .body h2{font-size:21px;line-height:1.35;margin:28px 0 12px;letter-spacing:-.025em}
 body .workspace-content .body h3{font-size:17px;line-height:1.4;margin:24px 0 10px}
 body .workspace-content .body h4{font-size:15px;margin:20px 0 8px}
-body .workspace-content .body>h1:first-child,body .workspace-content .body>h2:first-child,body .workspace-content .body>h3:first-child{margin-top:0}
+body .workspace-content .body h1:first-child,body .workspace-content .body h2:first-child,body .workspace-content .body h3:first-child{margin-top:0}
 body .workspace-content .body ul,body .workspace-content .body ol{padding-left:24px;margin:12px 0 20px}
 body .workspace-content .body li{padding-left:4px;margin:7px 0}
 body .workspace-content .body li::marker{color:var(--muted)}

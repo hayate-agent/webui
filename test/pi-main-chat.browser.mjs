@@ -113,6 +113,13 @@ const toolTexts = await page.locator('.tui-tool').allTextContents();
  await refreshed;
  assert.equal(await tree.evaluate(element => element.scrollTop), beforeScroll, 'background conversation refresh preserves sidebar scroll');
  assert.equal(await page.locator('dialog[open]').count(), 0, 'PI is rendered in main chat, not modal');
+ // The application frame is rendered by React from shadcn components, not static markup: index.html carries no
+ // frame, and the frame's buttons/inputs carry the shadcn variant classes.
+ const staticHtml = await (await page.request.get(`${origin}/index.html`)).text();
+ assert.ok(!/<aside|<textarea|<button/.test(staticHtml), 'index.html is an empty mount point; the frame is a React component');
+ assert.equal(await page.locator('[data-shell]').count(), 1, 'frame is mounted once by the React shell');
+ for (const selector of ['#new', '#send', '#rename']) assert.match(await page.locator(selector).getAttribute('class'), /inline-flex.*rounded-md/, `${selector} is a shadcn Button`);
+ for (const selector of ['#search', '#input']) assert.match(await page.locator(selector).getAttribute('class'), /border-input/, `${selector} is a shadcn field`);
  // The footer under the composer shows the version of the bundle that is really served.
  const footer = await page.locator('[data-webui-version]:visible').first().innerText();
  assert.ok(await page.locator('[data-webui-version]:visible').first().evaluate(element => { const c = document.querySelector('.bui-composer').getBoundingClientRect(), f = element.getBoundingClientRect(); return f.top >= c.bottom - 1 && f.bottom <= innerHeight + 1 && f.height > 0; }), 'version footer is visible below the composer');
@@ -238,6 +245,14 @@ await followupRow.getByText('Follow-up eingereiht · wartet auf PI', { exact: tr
  await picker.getByRole('button', { name: 'Open as chat', exact: true }).waitFor();
  await picker.getByRole('button', { name: 'Rename session', exact: true }).click();
  const renameDialog = page.getByRole('dialog', { name: 'Rename session', exact: true });
+ // Controls built imperatively inside dialogs and the header pickers carry the shadcn field/button classes.
+ assert.match(await renameDialog.getByLabel('Session name', { exact: true }).getAttribute('class'), /border-input.*rounded-md|rounded-md.*border-input/, 'dialog field is a shadcn Input');
+ const shadcnInput = await page.locator('#search').getAttribute('class');
+ for (const token of shadcnInput.split(' ').filter(t => /^(h-9|rounded-md|border-input|shadow-sm)$/.test(t))) assert.ok((await renameDialog.getByLabel('Session name', { exact: true }).getAttribute('class')).split(' ').includes(token), `dialog field shares shadcn Input class ${token}`);
+ assert.match(await renameDialog.getByRole('button', { name: 'Save', exact: true }).getAttribute('class'), /bg-primary/, 'dialog submit is a shadcn primary Button');
+ assert.match(await page.getByLabel('Active agent').getAttribute('class'), /border-input/, 'agent picker is a shadcn field');
+ for (const label of ['Active agent', 'Chat project']) { const select = page.getByLabel(label); assert.match(await select.getAttribute('class'), /ui-select.*appearance-none|appearance-none.*ui-select/, `${label} is a shadcn NativeSelect`); assert.notEqual(await select.evaluate(element => getComputedStyle(element).backgroundImage), 'none', `${label} shows the select chevron`); }
+ assert.equal(await page.locator('.ui-composer select').count() === 0 || /ui-select/.test(await page.locator('.ui-composer select').first().getAttribute('class')), true, 'composer delivery select is a shadcn NativeSelect');
  await renameDialog.getByLabel('Session name', { exact: true }).fill('Compiler investigation');
  await renameDialog.getByRole('button', { name: 'Save', exact: true }).click();
  await picker.getByRole('heading', { name: 'Compiler investigation', exact: true }).waitFor();
@@ -246,6 +261,9 @@ await followupRow.getByText('Follow-up eingereiht · wartet auf PI', { exact: tr
  assert.equal(added, true);
  await page.getByRole('button', { name: /Chosen PI session/ }).first().waitFor();
  await page.getByRole('button', { name: 'Settings for Chosen PI session', exact: true }).click();
+ const menuClass = await page.getByRole('menu').getAttribute('class');
+ assert.match(menuClass, /rounded-md.*border-line.*shadow-md/, 'action menu is the shadcn menu content');
+ assert.match(await page.getByRole('menuitem', { name: 'Fork chat', exact: true }).getAttribute('class'), /data-\[highlighted\]:bg-accent/, 'action menu items are shadcn menu items');
  await page.getByRole('menuitem', { name: 'Fork chat', exact: true }).click();
  await page.waitForFunction(() => document.querySelector('.workspace-screen h1')?.textContent === 'Chosen PI session · Fork');
  assert.equal(forkRequest.streamId, 'chosen'); assert.match(forkRequest.idempotencyKey, /^[a-f0-9-]{36}$/);

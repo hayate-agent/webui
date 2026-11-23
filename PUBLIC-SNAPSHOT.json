@@ -1,5 +1,5 @@
 {
-  "contentDigest": "813b66e841f70a991fa3425719b45fd58e3d4a8bb8afb8e91bce9bb3e2a17b7c",
+  "contentDigest": "9859dcedf3d77c7c13ba697a111ec5541cf6268d8fe4f2ab95bad24d8863bc57",
   "files": [
     {
       "mode": "100644",
@@ -39,7 +39,7 @@
     {
       "mode": "100644",
       "path": "PUBLIC-SOURCE.json",
-      "sha256": "0b86e84205dfffaa1a18568e044eabde67a33adcb824aa349b76d23ba4742c13"
+      "sha256": "ebed41969f98b02bb63805c183382c9e8aee3209d18224d12ad58f9e8f26360d"
     },
     {
       "mode": "100644",
@@ -64,7 +64,7 @@
     {
       "mode": "100644",
       "path": "dashboard/public/app.js",
-      "sha256": "5194f9f6cd2cefbf54c404f12856635ff8e1770c673ff7c9e6036c7087ee7e64"
+      "sha256": "0cdd8f29b92f0fee0d2e28261c746aeaf4586333a81188f19f2228b5d4824832"
     },
     {
       "mode": "100644",
@@ -79,7 +79,7 @@
     {
       "mode": "100644",
       "path": "dashboard/public/chat-output.css",
-      "sha256": "2c6793a632b2ab6b70d9e5e6ebf5c276a1df4d2a29ae95d0a5b38f095aff6e69"
+      "sha256": "863895d2ae99af6aa001fad87e72b8368c64d84a669e6bd350a3bd1431e60027"
     },
     {
       "mode": "100644",
@@ -94,7 +94,7 @@
     {
       "mode": "100644",
       "path": "dashboard/public/components.css",
-      "sha256": "6ae4e8978686d27e6e17820f9dfdb72010aedbf25d79bfa01a5d1e1d0a536798"
+      "sha256": "da5b50b86e0e3355695a5a98ca6ee11cc67b1699b41ca112e59197a16b304c19"
     },
     {
       "mode": "100644",
@@ -114,7 +114,7 @@
     {
       "mode": "100644",
       "path": "dashboard/public/index.html",
-      "sha256": "1d25bbde18d0b054070eda1063d6f61d7f9e5c5e3f3adaffae963028227f06e8"
+      "sha256": "344ce8d5fb4dd92b53048c7a55d6ea961791ae89303bd44b9b173f8ab6d41e39"
     },
     {
       "mode": "100644",
@@ -139,7 +139,7 @@
     {
       "mode": "100644",
       "path": "dashboard/public/mobile.css",
-      "sha256": "fd90bb8a6992eaa5290ba33555576d2959ee461e020735c878d3fadf794cab2e"
+      "sha256": "db890028c3051d11378a53fca0a3d1cbdd53db9ebcdf5f73ad2bb8cdce5a5c28"
     },
     {
       "mode": "100644",
@@ -149,7 +149,7 @@
     {
       "mode": "100644",
       "path": "dashboard/public/pi-client.js",
-      "sha256": "123f0e4b743c8cd8abcc06819075f5f333dc8d63f5efa70b2b48226644a24bc1"
+      "sha256": "24e3cff93aa7000890b43ae43df26ba2e2a8511f248ecdd9fd9fda95af7fb263"
     },
     {
       "mode": "100644",
@@ -169,7 +169,7 @@
     {
       "mode": "100644",
       "path": "dashboard/public/style.css",
-      "sha256": "257c884b6de4d1f8252b7d719e2f164298465ffe61902e8bea5fd6786c816eb7"
+      "sha256": "7d8f17d89acbc01cdba7bd705dfe92cd11a4e5119295f8e488f39b5a4439f4ae"
     },
     {
       "mode": "100644",
@@ -194,7 +194,7 @@
     {
       "mode": "100644",
       "path": "dashboard/public/ui/composer.jsx",
-      "sha256": "96b251f2c01be58804c65ef440709c46709fe4b5a714445dc61765fa0e38826d"
+      "sha256": "71209a5b851835c11dc5ae905e1a6af30b212e9ddab9828e8a2876701673a4b2"
     },
     {
       "mode": "100644",
@@ -203,13 +203,18 @@
     },
     {
       "mode": "100644",
+      "path": "dashboard/public/ui/control-class.js",
+      "sha256": "93f92ea0f19018158451db0fb0868efb3d960060126e1836e5747100d5faf0a0"
+    },
+    {
+      "mode": "100644",
       "path": "dashboard/public/ui/dialog.jsx",
-      "sha256": "9eb733b152a814abe1fca3f6018986bb7d82695b51be7f4dc3a0d119de4deec1"
+      "sha256": "2379d8bf1bc60ee5ba0cfc19a0914f076edd64f727cbbecb570121d5a6e19d1d"
     },
     {
       "mode": "100644",
       "path": "dashboard/public/ui/menu.jsx",
-      "sha256": "aa07056e5d1e1e8b23b59e282d35b092220d23c47ebd9a52c4d794b01ea77e3d"
+      "sha256": "31119a93a455f40f7499bcb06361d7aff76ca4b33ec70aaa7e3fb16a2303322a"
     },
     {
       "mode": "100644",
@@ -228,18 +233,63 @@
     },
     {
       "mode": "100644",
+      "path": "dashboard/public/ui/shadcn/badge.tsx",
+      "sha256": "a24795f11021f2fc61669211c8d6f6a331dd05f476dcf5c1155b018ea937c688"
+    },
+    {
+      "mode": "100644",
       "path": "dashboard/public/ui/shadcn/button.tsx",
       "sha256": "225183a39c85425b5a807b082983b21ba8cb337ad76782abd83d65c0a38e698f"
     },
     {
       "mode": "100644",
+      "path": "dashboard/public/ui/shadcn/card.tsx",
+      "sha256": "1f1272c6c8f4994986bc4f5a89557559f172138c77d072791b877dea712c717c"
+    },
+    {
+      "mode": "100644",
+      "path": "dashboard/public/ui/shadcn/field-classes.ts",
+      "sha256": "78468cf9ab93635095a1b63be2d17eb630cca6879fad3911d4cc027acccf9f6d"
+    },
+    {
+      "mode": "100644",
+      "path": "dashboard/public/ui/shadcn/input.tsx",
+      "sha256": "2b6f9b777da38fa0fd307769762c69c8ba5b8d17a6fb6b1b75052f581d31c366"
+    },
+    {
+      "mode": "100644",
+      "path": "dashboard/public/ui/shadcn/menu.tsx",
+      "sha256": "859564f776af3a901d0967366f0dcf0bee662245b23bf42f289cb8a6a61d6a73"
+    },
+    {
+      "mode": "100644",
+      "path": "dashboard/public/ui/shadcn/native-select.tsx",
+      "sha256": "5981d7a9b9301de2cb8d6a497a755f337d16c13b11f04b4eeab4441ad771f993"
+    },
+    {
+      "mode": "100644",
+      "path": "dashboard/public/ui/shadcn/skeleton.tsx",
+      "sha256": "7fa93a0db2d3a13b13bd2231e3a087832fdab9fe3db193fff235703b4dbcd342"
+    },
+    {
+      "mode": "100644",
+      "path": "dashboard/public/ui/shadcn/textarea.tsx",
+      "sha256": "7c1a400c2dc162b1de5d0285ed4fafdf3c976bf46e06ac908b48f799f9b8d1af"
+    },
+    {
+      "mode": "100644",
+      "path": "dashboard/public/ui/shell.jsx",
+      "sha256": "25a5b471d4a2e931ea073b106e88c20cd2505170f67203ddd7989136535f0e11"
+    },
+    {
+      "mode": "100644",
       "path": "dashboard/public/workspace-client.js",
-      "sha256": "71ec0146c1f07d55372d5aa9b66f870854bb1d7ad85ecfcbbfcde3fd25731ba8"
+      "sha256": "e2c94c1a707dea5b2ec9f75688ee881df6dd8cca76018fbd5439770eb5a98821"
     },
     {
       "mode": "100644",
       "path": "dashboard/public/workspace-polish.css",
-      "sha256": "59d01dadcc6c57cc059e944de556d29345e1964d596c659e0788c1043d79ed87"
+      "sha256": "1f05ebcb87a39a8f9a38deb5924ff400ccb7a8c772f6bd6558972c493e0dce88"
     },
     {
       "mode": "100644",
@@ -309,7 +359,7 @@
     {
       "mode": "100644",
       "path": "package.json",
-      "sha256": "fe59aed8120958b45b7fedaf5b2274886567a7ef12461c874163e6c2cd863dfd"
+      "sha256": "921db9a74c1ec94ddbd4ed026e229f3ba8adc90a6a8882f6fe9607e6670a068e"
     },
     {
       "mode": "100644",
@@ -619,7 +669,7 @@
     {
       "mode": "100644",
       "path": "test/pi-main-chat.browser.mjs",
-      "sha256": "77f68b5decccf936b06d30fedb4ed35bb00546a1855ca44867254ae2f15ce18c"
+      "sha256": "95dcce99538ae80b6fa12a4f4e59422c8039989bff20a407cdad0cff45fbbd71"
     },
     {
       "mode": "100644",
@@ -754,5 +804,5 @@
   ],
   "historyPolicy": "fresh public snapshot; no private ancestry or source author metadata",
   "schema": 1,
-  "sourceSHA": "a86ec948412416e959ec8f0ce54798a849acdacf"
+  "sourceSHA": "84f7ad982822a7be63c3805cbfb834405fc5065c"
 }

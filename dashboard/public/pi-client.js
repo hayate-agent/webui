@@ -1,3 +1,4 @@
+import { styleControl } from './ui/control-class.js';
 // PI remains an independent backend beside Hayate, never a replacement toggle.
 export async function mountPi({ request, markdown, label = 'Local PI', poll = false }) {
   let initial;
@@ -8,8 +9,8 @@ export async function mountPi({ request, markdown, label = 'Local PI', poll = fa
   view.className = 'workspace-dialog';
   const title = document.createElement('h2'), transcript = document.createElement('section'), status = document.createElement('p');
   const dialogs = document.createElement('section');
-  const input = document.createElement('textarea'); input.rows = 4;
-  const mode = document.createElement('select');
+  const input = styleControl(document.createElement('textarea')); input.rows = 4;
+  const mode = styleControl(document.createElement('select'));
   for (const [value, label] of [['', 'Send when idle'], ['steer', 'Steer current work'], ['followUp', 'Follow up']]) { const option = document.createElement('option'); option.value = value; option.textContent = label; mode.append(option); }
   const button = (label, action) => { const node = document.createElement('button'); node.type = 'button'; node.textContent = label; node.onclick = () => Promise.resolve().then(action).catch(error => { status.textContent = error.message; }); return node; };
   let selected, rendering = false, dirty = false, liveText = '';
@@ -30,7 +31,7 @@ export async function mountPi({ request, markdown, label = 'Local PI', poll = fa
       if (dialog.method === 'confirm') form.append(button('Confirm', () => respond({ confirmed: true })), button('Decline', () => respond({ confirmed: false })));
       else if (dialog.method === 'select') for (const option of dialog.options ?? []) form.append(button(option, () => respond({ value: option })));
       else {
-        const editor = document.createElement(dialog.method === 'editor' ? 'textarea' : 'input'); editor.value = dialog.prefill ?? ''; editor.placeholder = dialog.placeholder ?? ''; form.append(editor, button('Answer PI', () => respond({ value: editor.value })));
+        const editor = styleControl(document.createElement(dialog.method === 'editor' ? 'textarea' : 'input')); editor.value = dialog.prefill ?? ''; editor.placeholder = dialog.placeholder ?? ''; form.append(editor, button('Answer PI', () => respond({ value: editor.value })));
       }
       form.append(button('Cancel question', () => respond({ cancelled: true })));
       dialogNodes.set(dialog.id, form); dialogs.append(form);

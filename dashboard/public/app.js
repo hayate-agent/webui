@@ -1,4 +1,5 @@
 import { mountBeautifulCode } from './ui/beautiful-code.jsx';
+import { mountShell } from './ui/shell.jsx';
 import { marked } from 'marked';
 import DOMPurify from 'dompurify';
 import { mountWorkspace } from './workspace-client.js';
@@ -6,6 +7,7 @@ import { authenticate, checkIdentity } from './auth-client.js';
 import { mountPi } from './pi-client.js';
 import { setupMobileNavigation } from './mobile-nav.js';
 
+mountShell();
 const $ = id => document.getElementById(id);
 const view = $('conversation');
 let selected;
