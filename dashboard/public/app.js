@@ -257,3 +257,13 @@ async function init() {
   listEvents.onerror = () => { $('connection').textContent = 'Connection interrupted · reconnecting'; };
 }
 guarded(init)();
+
+// Footer(s): the version of the bundle that is actually running, read from the served build.
+// The workspace composer owns the visible footer, the legacy view has its own; both are filled.
+fetch('/build-info.json', { cache: 'no-store' }).then(response => response.ok ? response.json() : Promise.reject(new Error(String(response.status)))).then(info => {
+  const ok = typeof info.version === 'string' && info.version.length < 64;
+  const text = ok ? `WebUI ${info.version}` : 'WebUI version unavailable';
+  const title = ok && info.revision ? `Hayate WebUI revision ${info.revision}` : 'Hayate WebUI (revision unknown)';
+  const fill = () => { for (const label of document.querySelectorAll('[data-webui-version]')) { if (label.textContent !== text) label.textContent = text; if (label.title !== title) label.title = title; } };
+  fill(); new MutationObserver(fill).observe(document.body, { childList: true, subtree: true });
+}).catch(() => { for (const label of document.querySelectorAll('[data-webui-version]')) label.textContent = 'WebUI version unavailable'; });

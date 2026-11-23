@@ -184,6 +184,9 @@ export async function startRelayClient({ stateFile, endpoint, adapterOrigin, Web
   if (frame.capability === 'messages' && input.action === 'changes' && /^[A-Za-z0-9_-]+$/.test(input.streamId) && Number.isSafeInteger(input.since) && input.since >= 0) {
     return request(`/api/pi/sessions/${input.streamId}/changes?since=${input.since}${typeof input.epoch === 'string' && input.epoch.length <= 64 ? '&epoch=' + encodeURIComponent(input.epoch) : ''}`);
   }
+  if (frame.capability === 'messages' && input.action === 'image-read' && /^[A-Za-z0-9_-]+$/.test(input.streamId) && typeof input.messageId === 'string' && input.messageId.length <= 128 && Number.isSafeInteger(input.index) && Number.isSafeInteger(input.offset ?? 0)) {
+    return request(`/api/pi/sessions/${input.streamId}/image?message=${encodeURIComponent(input.messageId)}&index=${input.index}&offset=${input.offset ?? 0}`);
+  }
   if (frame.capability === 'messages' && input.action === 'submission-status' && /^[A-Za-z0-9_-]+$/.test(input.streamId) && UUID.test(input.id)) {
     const submission = submissions.get(input.streamId + ':' + input.id);
     return { status: submission?.status ?? 'unknown' };
@@ -226,7 +229,7 @@ export async function startRelayClient({ stateFile, endpoint, adapterOrigin, Web
    if (!binary && frame?.type === 'features' && Array.isArray(frame.features)) { if (frame.features.includes('stream-delta-v1')) streaming = current; return; }
    try { if (binary || !UUID.test(frame.id) || frame.type !== 'request' || !frame.input || typeof frame.input !== 'object' || seen.has(frame.id) || seenReads.has(frame.id)) throw Error(); }
    catch { current.close(1008, 'Invalid request'); return; }
-   const readOnly = ['list', 'read', 'resolve', 'submission-status', 'fork-eligibility', 'changes'].includes(frame.input.action) || frame.input.action === 'pi-chats' && ['list', 'preview'].includes(frame.input.operation) || frame.input.action === 'pi' && frame.input.body === undefined;
+   const readOnly = ['list', 'read', 'resolve', 'submission-status', 'fork-eligibility', 'changes', 'image-read'].includes(frame.input.action) || frame.input.action === 'pi-chats' && ['list', 'preview'].includes(frame.input.operation) || frame.input.action === 'pi' && frame.input.body === undefined;
    if (readOnly) {
     if (seenReads.size >= 4096) seenReads.delete(seenReads.values().next().value);
     seenReads.add(frame.id);

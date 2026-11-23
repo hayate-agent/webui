@@ -41,20 +41,47 @@ body .workspace-content .ui-chat-message{border:0;background:none;box-shadow:non
 body .workspace-content .ui-chat-message.user{background:var(--user);border-radius:6px;padding:8px 14px;margin:18px 0 14px}
 body .workspace-content .ui-chat-message.user p{margin:0;white-space:pre-wrap}
 body .workspace-content .ui-chat-message.assistant{padding:0 2px}
-body .workspace-content .ui-chat-message.toolResult{margin:-8px 0 14px}
-body .workspace-content .ui-message-disclosure{border:0;border-left:2px solid var(--line);border-radius:0;background:none;margin:6px 0;overflow:visible}
-body .workspace-content .ui-message-disclosure.failed{border-left-color:var(--danger)}
-body .workspace-content .ui-message-disclosure summary{display:flex;align-items:baseline;gap:8px;padding:2px 0 2px 10px;background:none;font:12.5px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--text);cursor:pointer;list-style:none;min-width:0}
-body .workspace-content .ui-message-disclosure summary::-webkit-details-marker{display:none}
-body .workspace-content .ui-message-disclosure.thinking summary{color:var(--muted);font-style:italic}
-body .workspace-content .ui-message-disclosure.failed summary{color:var(--danger)}
-.ui-disclosure-indicator{flex:none;width:1.2em;text-align:center;color:var(--accent)}
-.ui-message-disclosure.failed .ui-disclosure-indicator{color:var(--danger)}
-.ui-disclosure-label{flex:none;font-weight:600}
-.ui-disclosure-hint::before{content:attr(data-text)}
-.ui-disclosure-hint{flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--muted)}
-.ui-message-disclosure[open] .ui-disclosure-hint{display:none}
-body .workspace-content .ui-message-disclosure pre{margin:4px 0 6px 12px;padding:8px 12px;max-height:360px;overflow:auto;white-space:pre-wrap;overflow-wrap:anywhere;font:12px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace;background:var(--panel);border:0;border-radius:4px;color:var(--muted)}
-.ui-message-disclosure.failed pre{color:var(--danger)}
+body .workspace-content .ui-chat-message.toolResult{margin:0 0 8px}
+body .workspace-content .tui-tool{display:flex;align-items:baseline;gap:8px;margin:10px 0 2px;font:12.5px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--text);min-width:0}
+body .workspace-content .tui-mark{flex:none;width:1.2em;text-align:center;color:var(--accent)}
+body .workspace-content .tui-tool.failed,body .workspace-content .tui-tool.failed .tui-mark{color:var(--danger)}
+body .workspace-content .tui-tool.running .tui-mark{color:var(--muted)}
+body .workspace-content .tui-tool-name{flex:none;font-weight:600}
+body .workspace-content .tui-tool-args{flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--muted)}
+body .workspace-content .tui-tool-time{flex:none;color:var(--muted)}
+body .workspace-content .tui-result{margin:0 0 8px 1.2em;padding-left:10px;border-left:2px solid var(--line)}
+body .workspace-content .tui-result.failed{border-left-color:var(--danger)}
+body .workspace-content .tui-output,body .workspace-content .tui-thinking pre{margin:0;padding:0;border:0;background:none;white-space:pre-wrap;overflow-wrap:anywhere;font:12px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--muted)}
+body .workspace-content .tui-result.failed .tui-output{color:var(--danger)}
+body .workspace-content .tui-thinking{margin:6px 0;padding-left:10px;border-left:2px solid var(--line);font-style:italic}
+body .workspace-content .tui-thinking pre{font:inherit;font-size:13px}
+body .workspace-content .tui-more{border:0;background:none;margin:0;overflow:visible;border-radius:0}
+body .workspace-content .tui-more summary{display:block;padding:0;background:none;font:12px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--accent);cursor:pointer;list-style:none}
+body .workspace-content .tui-more summary::-webkit-details-marker{display:none}
+body .workspace-content .tui-more[open] summary{display:none}
 body .workspace-content .ui-chat-message.assistant .body{margin:0}
-@media(max-width:760px){body .workspace-content .ui-chat-message{font-size:14px}body .workspace-content .ui-message-disclosure summary{flex-wrap:wrap}.ui-disclosure-hint{flex-basis:100%}}
+@media(max-width:760px){body .workspace-content .ui-chat-message{font-size:14px}body .workspace-content .tui-tool{flex-wrap:wrap}body .workspace-content .tui-tool-args{flex-basis:100%;white-space:normal}}
+
+/* One scroller per region, never a scrollbar inside a scrollable page. Absolutely positioned
+   helpers (.sr-only) inside the transcript must be contained by their message, otherwise the
+   document grows by the whole transcript height and gets its own scrollbar. */
+html,body{overflow:hidden;overscroll-behavior:none}
+body .workspace-content,body .ui-chat-message{position:relative}
+.ui-app-footer{flex:none;padding:2px 16px 8px;text-align:center;font:11px/1.4 ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--muted)}
+[data-webui-version]{user-select:all}
+body .workspace-content{overscroll-behavior:contain}
+body .workspace-tree{overscroll-behavior:contain}
+
+/* PI-like tool box: call line and result form one tinted panel; success/failure tint the result, palette variables preserved. */
+body .workspace-content .tui-tool{background:color-mix(in srgb,var(--text) 7%,transparent);border-radius:6px 6px 0 0;padding:6px 10px;margin:10px 0 0}
+body .workspace-content .tui-result{margin:0 0 10px;padding:6px 10px 8px;border-left:0;border-radius:0 0 6px 6px;background:color-mix(in srgb,var(--accent) 14%,transparent)}
+body .workspace-content .tui-result.failed{background:color-mix(in srgb,var(--danger) 16%,transparent)}
+body .workspace-content .tui-took,body .workspace-content .tui-time{color:var(--muted);font:11.5px/1.4 ui-monospace,SFMono-Regular,Menlo,monospace}
+body .workspace-content .tui-took{margin-top:6px}
+body .workspace-content .tui-time{display:block;margin:0 0 2px;text-align:right}
+body .workspace-content .tui-images{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0 0}
+body .workspace-content .tui-image-open{all:unset;cursor:pointer;text-decoration:underline dotted;text-underline-offset:3px}
+body .workspace-content .tui-image-open:focus-visible{outline:2px solid var(--accent,currentColor);outline-offset:2px;border-radius:4px}
+body .workspace-content .tui-image-pic{display:block;max-width:min(100%,420px);max-height:320px;border-radius:6px;object-fit:contain}
+body .workspace-content .tui-image:has(.tui-image-pic){border:0;padding:0}
+body .workspace-content .tui-image{border:1px dashed var(--line);border-radius:6px;padding:2px 8px;font:12px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--muted)}

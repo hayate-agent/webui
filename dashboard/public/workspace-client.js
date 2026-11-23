@@ -2,7 +2,7 @@ import { openActionMenu } from './ui/menu.jsx';
 import { openWorkspaceDialog } from './ui/dialog.jsx';
 import { createComposer } from './ui/composer.jsx';
 import { createMediaDrafts, uploadImageChunks } from './media-drafts.js';
-import { renderChatMessage } from './ui/message.jsx';
+import { renderChatMessage, renderLiveThinking, renderLiveTool, tickElapsed } from './ui/message.jsx';
 import { setupMobileNavigation } from './mobile-nav.js';
 import { createSessionCard } from './ui/session-card.jsx';
 import { settleReceipts } from './receipts.js';
@@ -18,6 +18,7 @@ import { createCommandChannel } from './command-channel.js';
 import { appendNewer, prependOlder } from './history-window.js';
 import { createChatCache } from './chat-cache.js';
 import { createNavigation } from './navigation.js';
+import { createImageLoader, hydrateImages } from './image-loader.js';
 export { discoverAgent };
 
 export async function mountWorkspace({ request, notice, markdown }) {
@@ -33,8 +34,13 @@ export async function mountWorkspace({ request, notice, markdown }) {
   let state, projectId, streamId, events, visible = false;
   let remoteSelection, remoteRefreshing = false, browsingAgent, resyncStream = false;
   let localHistory;
-  const clearLocalHistory = () => { localHistory?.viewport.destroy(); localHistory = undefined; };
-  const clearRemote = () => { remoteSelection?.viewport?.destroy(); remoteSelection = undefined; clearLocalHistory(); connectionStatus.hidden = true; meterSlot?.replaceChildren(); };
+  const clearLocalHistory = () => { if (localHistory) imageLoader.clear(); localHistory?.viewport.destroy(); localHistory = undefined; };
+  // A conversation on this dashboard's OWN agent (no agentId) reads images through its own GET route;
+  // a registered agent uses the relay read path. Both return the same bounded chunk shape.
+  const imageLoader = createImageLoader({ fetchChunk: (chunk, scope) => scope.agentId
+    ? peerRequest(scope.agentId, 'messages', { action: 'image-read', streamId: scope.streamId, ...chunk })
+    : request(`/api/workspace/streams/${encodeURIComponent(scope.streamId)}/image?${new URLSearchParams({ message: chunk.messageId, index: String(chunk.index), offset: String(chunk.offset) })}`) });
+  const clearRemote = () => { imageLoader.clear(); remoteSelection?.viewport?.destroy(); remoteSelection = undefined; clearLocalHistory(); connectionStatus.hidden = true; meterSlot?.replaceChildren(); };
   let agentRoster = [], navigationRevision = 0, peerState, sending = false, management = false;
   const newest = (a, b) => (b.updatedAt ?? b.createdAt ?? 0) - (a.updatedAt ?? a.createdAt ?? 0) || a.id.localeCompare(b.id);
   const remoteProjects = new Map(), agentSnapshots = new Map();
@@ -58,7 +64,7 @@ export async function mountWorkspace({ request, notice, markdown }) {
   // opId (one server ledger). Older backends keep the plain POST.
   let commands;
   const peerRequest = (agentId, capability, input) => {
-    const read = ['list', 'read', 'resolve', 'submission-status', 'fork-eligibility', 'changes'].includes(input.action) || input.action === 'pi-chats' && ['list', 'preview'].includes(input.operation);
+    const read = ['list', 'read', 'resolve', 'submission-status', 'fork-eligibility', 'changes', 'image-read'].includes(input.action) || input.action === 'pi-chats' && ['list', 'preview'].includes(input.operation);
     if (read && capabilities['browser-live-v1'] === 1) return request(`/api/workspace/agents/${agentId}/read?${new URLSearchParams({ capability, input: JSON.stringify(input) })}`);
     if (capabilities['browser-commands-v1'] === 1) {
       commands ??= createCommandChannel({ serverOffsetMs, transport: { command: () => false }, post: frame => request(`/api/workspace/agents/${frame.agentId}/request`, { opId: frame.opId, capability: frame.capability, input: frame.input }) });
@@ -107,7 +113,7 @@ export async function mountWorkspace({ request, notice, markdown }) {
   const syncDraft = () => {
     const key = draftKey(); if (key === activeDraftKey) { renderAttachments(); return; }
     storeDraft(); activeDraftKey = key;
-    const draft = drafts.get(key); input.value = draft?.text ?? ''; piMode.value = draft?.mode ?? 'followUp'; input.disabled = false; renderAttachments();
+    const draft = drafts.get(key); input.value = draft?.text ?? ''; piMode.value = draft?.mode ?? 'steer'; input.disabled = false; renderAttachments();
   };
   input.addEventListener('input', storeDraft); piMode.addEventListener('change', storeDraft);
   const clearSentDraft = (key, text) => {
@@ -219,6 +225,7 @@ export async function mountWorkspace({ request, notice, markdown }) {
     current.onerror = () => { if (visible && events === current) notice(interrupted); };
   }
   let treeSignature;
+  let treeRevealed = false;
   function renderTree() {
     const signature = JSON.stringify({ state, hiddenAgents: [...hiddenAgents], agents: agentRoster, snapshots: [...agentSnapshots], query: $('search').value, projectId, streamId, remoteSelection: remoteSelection && { agentId: remoteSelection.agentId, streamId: remoteSelection.streamId }, browsingAgent });
     if (signature === treeSignature) return;
@@ -241,6 +248,17 @@ export async function mountWorkspace({ request, notice, markdown }) {
     for (const agent of agentRoster.filter(agent => !hiddenAgents.has(agent.id))) fragment.append(renderAgentTree(agentSnapshots.get(agent.id) ?? { projects: [], streams: [] }, agent.id, agent.name));
     tree.replaceChildren(fragment);
     tree.scrollTop = scrollTop; tree.scrollLeft = scrollLeft;
+    // First paint after a reload / #/chat/... address: bring the open chat into view.
+    if (!treeRevealed) {
+      const current = tree.querySelector('[aria-current="true"]');
+      if (current) {
+        treeRevealed = true;
+        // The scroller is the tree on desktop and the whole sidebar in the mobile drawer.
+        const scroller = [tree, tree.closest('aside')].find(element => element && element.scrollHeight > element.clientHeight + 1) ?? tree;
+        const box = scroller.getBoundingClientRect(), row = current.getBoundingClientRect();
+        if (row.top < box.top || row.bottom > box.bottom) scroller.scrollTop += row.top - box.top - (box.height - row.height) / 2;
+      }
+    }
   }
   function renderAgentTree(source, agentId, name) {
     const fragment = node('section', undefined, 'workspace-agent-group'); fragment.dataset.agentId = agentId ?? 'local';
@@ -346,6 +364,7 @@ export async function mountWorkspace({ request, notice, markdown }) {
       clearLocalHistory();
       localHistory = { id: stream.id, viewport: createHistoryViewport({ scroller: body, render: message => {
         const row = renderChatMessage(message, new Set(), markdown);
+        hydrateImages(row, imageLoader, { agentId: '', streamId: stream.id });
         if (message.accepted === false) row.append(node('small', 'Acceptance unconfirmed'), button('Retry safely', async () => {
           await request(`/api/workspace/streams/${stream.id}/messages`, { id: message.id, text: message.text });
           attempts.delete(stream.id); sessionStorage.setItem('workspace.pending', JSON.stringify([...attempts]));
@@ -534,7 +553,7 @@ export async function mountWorkspace({ request, notice, markdown }) {
         else { const editor = node('textarea'); editor.value = question.prefill ?? ''; editor.placeholder = question.placeholder ?? ''; editor.setAttribute('aria-label', question.title ?? 'Answer PI'); field.append(editor, button('Answer PI', () => answer({ value: editor.value }))); }
         field.append(button('Cancel question', () => answer({ cancelled: true }))); fragment.append(field);
       }
-      const renderMessage = message => renderChatMessage(message, expanded, markdown);
+      const renderMessage = message => { const row = renderChatMessage(message, expanded, markdown); hydrateImages(row, imageLoader, { agentId: selection.agentId, streamId: selection.streamId }); return row; };
       const loadEarlier = async () => {
         if (!selection.before || selection.loadingEarlier) return;
         selection.loadingEarlier = true;
@@ -555,20 +574,16 @@ export async function mountWorkspace({ request, notice, markdown }) {
       if (earlier) fragment.append(earlier);
       fragment.append(selection.viewport.element);
       if (selection.detached) fragment.append(button('Jump to latest messages', async () => { selection.history = undefined; selection.before = undefined; selection.detached = false; selection.signature = undefined; await showRemote(selection); }));
+      // Chronology: a message sent while the agent works is queued behind the live
+      // thinking/tool/text already on screen (steer lands after the running tool).
+      if (conversation.activity?.thinking) fragment.append(renderLiveThinking(conversation.activity.thinking, expanded));
+      for (const tool of conversation.activity?.executions ?? []) fragment.append(renderLiveTool(tool));
+      if (conversation.activity?.text) { const row = node('article', undefined, 'message assistant'); row.append(markdown(conversation.activity.text)); fragment.append(row); }
       for (const receipt of pendingAccepted) {
         const row = node('article', undefined, 'message user');
-        row.append(node('p', receipt.text), node('small', receipt.unconfirmed ? 'Zustellung unbestätigt · wird nicht automatisch erneut gesendet' : receipt.mode === 'followUp' ? 'Follow-up eingereiht · wartet auf PI' : 'Angenommen · wartet auf PI-Verlauf', 'workspace-context'));
+        row.append(node('p', receipt.text), node('small', receipt.unconfirmed ? 'Zustellung unbestätigt · wird nicht automatisch erneut gesendet' : receipt.mode === 'followUp' ? 'Follow-up eingereiht · wartet auf PI' : receipt.mode === 'steer' ? 'Steuerung angenommen · wirkt nach dem laufenden Schritt' : 'Angenommen · wartet auf PI-Verlauf', 'workspace-context'));
         fragment.append(row);
       }
-      if (conversation.activity?.thinking) {
-        const details = node('details'); details.dataset.disclosureId = 'live:thinking'; details.open = expanded.has(details.dataset.disclosureId);
-        details.append(node('summary', 'Thinking…'), node('pre', conversation.activity.thinking)); fragment.append(details);
-      }
-      for (const tool of conversation.activity?.executions ?? []) {
-        const details = node('details'); details.dataset.disclosureId = `live:${tool.id}`; details.open = expanded.has(details.dataset.disclosureId);
-        details.append(node('summary', `${tool.name} · ${tool.status}${tool.durationMs != null ? ` · ${(tool.durationMs / 1000).toFixed(1)}s` : ''}`), node('pre', typeof tool.arguments === 'string' ? tool.arguments : JSON.stringify(tool.arguments, null, 2))); fragment.append(details);
-      }
-      if (conversation.activity?.text) { const row = node('article', undefined, 'message assistant'); row.append(markdown(conversation.activity.text)); fragment.append(row); }
       if (conversation.activity) fragment.append(node('p', Object.entries(conversation.activity.tools ?? {}).filter(([, count]) => count).map(([name, count]) => `${name} ×${count}`).join(' · ') || 'Target is working…', 'workspace-context'));
       body.replaceChildren(fragment);
       // Re-attaching the viewport resets scrollTop; restore position only after the
@@ -618,6 +633,7 @@ export async function mountWorkspace({ request, notice, markdown }) {
     window.addEventListener('pagehide', () => transport.stop());
     window.addEventListener('pageshow', () => transport.start());
   } else setInterval(() => { if (!document.hidden) void refreshRemote(); }, 5000);
+  setInterval(() => { if (!document.hidden) tickElapsed(body); }, 1000);
   function render() {
     renderTree(); if (management) return; renderTargets();
     if (remoteSelection) run(() => showRemote(remoteSelection))();

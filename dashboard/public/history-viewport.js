@@ -1,6 +1,6 @@
 // Variable-height history window: only nearby messages own DOM nodes.
 // Message data and measured heights are separate from the rendered window.
-export function createHistoryViewport({ render, scroller, onEarlier, windowSize = 32 }) {
+export function createHistoryViewport({ render, scroller, onEarlier, windowSize = 32, maxRows = 120 }) {
   const element = document.createElement('div');
   element.className = 'history-viewport';
   const top = document.createElement('div'), rows = document.createElement('div'), bottom = document.createElement('div');
@@ -17,15 +17,35 @@ export function createHistoryViewport({ render, scroller, onEarlier, windowSize 
     if (event.type === 'wheel' && event.deltaY < 0 || event.type === 'touchmove' || event.type === 'keydown' && ['ArrowUp', 'PageUp', 'Home'].includes(event.key)) { userScrolled = true; schedule(); }
   };
   for (const name of ['wheel', 'touchmove', 'keydown']) scroller.addEventListener(name, markInteraction, { passive: true });
-  const height = message => heights.get(message.id) ?? 160;
+  // Unmeasured rows use the mean of measured ones, so spacers stay close to reality
+  // (a fixed guess far from the real height shows as blank space while scrolling).
+  let measuredSum = 0, measuredCount = 0;
+  const estimate = () => measuredCount ? Math.max(24, measuredSum / measuredCount) : 120;
+  const height = message => heights.get(message.id) ?? estimate();
   const offset = () => element.getBoundingClientRect().top - scroller.getBoundingClientRect().top + scroller.scrollTop;
   function paint(force = false) {
     if (disposed || !element.isConnected) return;
+    paintOnce(force);
+    // A spacer that is still visible after measuring is blank screen: settle at once.
+    for (let i = 0; i < 4 && blankVisible(); i++) paintOnce(true);
+  }
+  function blankVisible() {
+    const box = scroller.getBoundingClientRect();
+    const covers = el => { const r = el.getBoundingClientRect(); return r.height > 1 && Math.min(r.bottom, box.bottom) - Math.max(r.top, box.top) > 1; };
+    return (start > 0 && covers(top)) || (end < messages.length && covers(bottom));
+  }
+  function paintOnce(force) {
     const y = Math.max(0, scroller.scrollTop - offset());
     let position = 0, first = 0;
     while (first < messages.length - 1 && position + height(messages[first]) < y) position += height(messages[first++]);
     const nextStart = Math.max(0, Math.min(first - 6, messages.length - windowSize));
-    const nextEnd = Math.min(messages.length, nextStart + windowSize);
+    // The window always covers the visible area plus one screen of overscan, however
+    // small the rows are; the DOM stays bounded by `maxRows`, not by a fixed 32.
+    const reach = y + scroller.clientHeight * 2;
+    let nextEnd = Math.min(messages.length, nextStart + windowSize), covered = 0;
+    for (let i = 0; i < nextStart; i++) covered += height(messages[i]);
+    for (let i = nextStart; i < nextEnd; i++) covered += height(messages[i]);
+    while (nextEnd < messages.length && nextEnd - nextStart < maxRows && covered < reach) covered += height(messages[nextEnd++]);
     if (!force && nextStart === start && nextEnd === end) return;
     // Rows above the viewport are measured only once they were mounted. When a
     // row turns out taller than its estimate the spacer grows; without correcting
@@ -52,10 +72,15 @@ export function createHistoryViewport({ render, scroller, onEarlier, windowSize 
       fragment.append(cached.node);
     }
     rows.replaceChildren(fragment);
-    for (const message of visible) {
-      const node = nodes.get(message.id).node, style = getComputedStyle(node);
-      heights.set(message.id, Math.max(1, node.getBoundingClientRect().height + (parseFloat(style.marginTop) || 0) + (parseFloat(style.marginBottom) || 0)));
-    }
+    // Row pitch = distance to the next row's top (adjacent margins collapse, so adding
+    // both margins would overstate the height and shift every later position).
+    const mounted = visible.map(message => nodes.get(message.id).node);
+    mounted.forEach((node, index) => {
+      const id = visible[index].id, box = node.getBoundingClientRect(), next = mounted[index + 1]?.getBoundingClientRect();
+      const pitch = Math.max(1, next ? next.top - box.top : box.height + (parseFloat(getComputedStyle(node).marginBottom) || 0));
+      if (heights.has(id)) measuredSum -= heights.get(id); else measuredCount++;
+      heights.set(id, pitch); measuredSum += pitch;
+    });
     top.style.height = `${messages.slice(0, start).reduce((sum, message) => sum + height(message), 0)}px`;
     bottom.style.height = `${messages.slice(end).reduce((sum, message) => sum + height(message), 0)}px`;
     const kept = anchorId === undefined ? undefined : nodes.get(anchorId)?.node;
@@ -93,7 +118,7 @@ export function createHistoryViewport({ render, scroller, onEarlier, windowSize 
       const previous = messages;
       messages = next;
       const valid = new Set(messages.map(message => message.id));
-      for (const id of heights.keys()) if (!valid.has(id)) heights.delete(id);
+      for (const [id, value] of heights) if (!valid.has(id)) { heights.delete(id); measuredSum -= value; measuredCount--; }
       if (anchorId && previous[0]?.id !== next[0]?.id) {
         const index = messages.findIndex(message => message.id === anchorId);
         if (index >= 0) scroller.scrollTop = offset() + messages.slice(0, index).reduce((sum, message) => sum + height(message), 0);

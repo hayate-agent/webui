@@ -4,6 +4,9 @@ COPY package.json package-lock.json ./
 RUN npm ci --include=dev --ignore-scripts
 COPY scripts ./scripts
 COPY dashboard ./dashboard
+ARG HAYATE_WEBUI_REVISION=
+ARG HAYATE_WEBUI_COMMITS=
+ENV HAYATE_WEBUI_REVISION=$HAYATE_WEBUI_REVISION HAYATE_WEBUI_COMMITS=$HAYATE_WEBUI_COMMITS
 RUN npm run build
 
 FROM node:24-bookworm-slim
