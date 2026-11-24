@@ -22,15 +22,17 @@ export function createMediaDrafts({ maxBytes = 5 * 1024 * 1024, maxCount = 4 } =
  };
 }
 
-export async function uploadImageChunks(file, sendChunk) {
+/** `onProgress(fraction)` is called with 0 before the first chunk and after every acknowledged chunk (1 at the end). */
+export async function uploadImageChunks(file, sendChunk, onProgress = () => {}) {
  const uploadId = crypto.randomUUID();
  const bytes = new Uint8Array(await file.arrayBuffer());
  if (!bytes.length) throw Error('Empty image');
- let result;
+ let result; onProgress(0);
  for (let offset = 0, index = 0; offset < bytes.length; offset += 45000, index++) {
   const part = bytes.subarray(offset, offset + 45000);
   let binary = ''; for (const byte of part) binary += String.fromCharCode(byte);
   result = await sendChunk({ uploadId, index, data: btoa(binary), mimeType: file.type, final: offset + part.length === bytes.length });
+  onProgress((offset + part.length) / bytes.length);
  }
  if (!result?.id || !result?.sha256) throw Error('Image upload did not complete');
  return { id: result.id, sha256: result.sha256, size: result.size, name: file.name };

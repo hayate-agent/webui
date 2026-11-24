@@ -20,3 +20,12 @@ test('media uploader bounds every JSON frame and stops on failed chunk', async (
  await assert.rejects(uploadImageChunks(file, async () => { count++; throw Error('offline'); }), /offline/);
  assert.equal(count, 1, 'no automatic upload replay');
 });
+test('upload progress: 0 before the first chunk, one step per acknowledged chunk, exactly 1 at the end, nothing after a failure', async () => {
+ const file = new Blob([new Uint8Array(100000)], { type: 'image/png' });
+ const seen = [];
+ await uploadImageChunks(file, async chunk => chunk.final ? { id: 'i', sha256: 's', size: 100000 } : { next: chunk.index + 1 }, fraction => seen.push(fraction));
+ assert.deepEqual(seen, [0, 45000 / 100000, 90000 / 100000, 1]);
+ const failed = [];
+ await assert.rejects(uploadImageChunks(file, async chunk => { if (chunk.index === 1) throw Error('offline'); return {}; }, fraction => failed.push(fraction)), /offline/);
+ assert.deepEqual(failed, [0, 0.45], 'no progress is reported for the chunk that failed');
+});

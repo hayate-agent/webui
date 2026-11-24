@@ -22,6 +22,8 @@ import { createChatCache } from './chat-cache.js';
 import { createNavigation } from './navigation.js';
 import { createImageLoader, hydrateImages } from './image-loader.js';
 import { withDashboardContext } from './dashboard-context.js';
+import { preferences } from './preferences.js';
+import { openAppearance } from './appearance.js';
 export { discoverAgent };
 
 export async function mountWorkspace({ request, notice, markdown }) {
@@ -49,17 +51,16 @@ export async function mountWorkspace({ request, notice, markdown }) {
   const newest = (a, b) => (b.updatedAt ?? b.createdAt ?? 0) - (a.updatedAt ?? a.createdAt ?? 0) || a.id.localeCompare(b.id);
   const remoteProjects = new Map(), agentSnapshots = new Map();
   const chatCache = createChatCache();
-  const visibilityKey = 'workspace.hidden-agents';
-  let hiddenAgents = new Set();
-  try { const saved = JSON.parse(localStorage.getItem(visibilityKey) ?? '[]'); if (Array.isArray(saved)) hiddenAgents = new Set(saved.filter(id => typeof id === 'string')); } catch { /* Invalid preferences must not prevent loading chats. */ }
+  // Hidden items are a per-operator preference stored on the server (see preferences.js), so every browser shows the same sidebar.
+  let hiddenAgents = new Set(preferences.value.hidden);
+  preferences.onChange(value => { if (value.hidden.length !== hiddenAgents.size || value.hidden.some(key => !hiddenAgents.has(key))) { hiddenAgents = new Set(value.hidden); renderTree(); } });
   // One preference set for three levels. Agent ids are stored unchanged (older
   // browsers keep working); projects and chats are `project:<agent>:<id>` / `chat:<agent>:<id>`.
   const hideKey = (kind, agentId, id) => `${kind}:${agentId ?? 'local'}:${id}`;
   const isHidden = (kind, agentId, id) => hiddenAgents.has(hideKey(kind, agentId, id));
   function setAgentHidden(id, hidden) {
-    const next = new Set(hiddenAgents); if (hidden) next.add(id); else next.delete(id);
-    try { localStorage.setItem(visibilityKey, JSON.stringify([...next])); } catch { notice('Sidebar preference could not be saved; it will apply until reload.'); }
-    hiddenAgents = next; renderTree();
+    // Applied at once; if the server refuses, the preferences roll back and the sidebar follows.
+    preferences.update(hidden ? { hide: [id] } : { show: [id] }).catch(error => notice(`Sidebar preference could not be saved: ${error.message}`));
   }
   async function newAgentChat(id) {
     agentPicker.value = id; await agentPicker.onchange(); input.focus();
@@ -101,11 +102,34 @@ export async function mountWorkspace({ request, notice, markdown }) {
     attach.hidden = !supportsImages();
     attachments.replaceChildren();
     for (const item of mediaDrafts.list(activeDraftKey)) {
-      const row = node('div'); const image = node('img'); image.src = item.url; image.alt = item.file.name; image.width = 80; image.height = 80;
-      row.append(image, button(`Remove ${item.file.name}`, () => { mediaDrafts.remove(activeDraftKey, item.id); renderAttachments(); })); attachments.append(row);
+      const row = node('div', undefined, 'ui-attachment'); row.dataset.draftId = item.id; const image = node('img'); image.src = item.url; image.alt = item.file.name; image.title = item.file.name;
+      const remove = button('×', () => { mediaDrafts.remove(activeDraftKey, item.id); renderAttachments(); }); remove.setAttribute('aria-label', `Remove ${item.file.name}`); remove.title = `Remove ${item.file.name}`;
+      row.append(image, remove);
+      // While a send is in progress the captured image list must not change: no removing (even of images still waiting their turn).
+      if (sending) remove.hidden = true;
+      if (uploading.has(item.id)) { row.dataset.uploading = ''; showUploadProgress(row, uploading.get(item.id)); }
+      attachments.append(row);
     }
   }
-  const addImages = selected => { if (!supportsImages()) { notice('This agent does not yet support image uploads. Your files were not sent.'); return; } try { mediaDrafts.add(activeDraftKey, selected); renderAttachments(); } catch (error) { notice(error.message); } };
+  // Upload progress: shown on the thumbnail while its chunks are sent; the send button says so too.
+  const uploading = new Map();
+  function showUploadProgress(row, fraction) {
+    let bar = row.querySelector('progress'), label = row.querySelector('.pct');
+    if (!bar) { bar = node('progress'); bar.max = 1; bar.setAttribute('aria-label', 'Upload progress'); label = node('span', undefined, 'pct'); row.append(label, bar); }
+    bar.value = fraction; label.textContent = `${Math.round(fraction * 100)} %`;
+  }
+  const sendLabel = send.querySelector('span');
+  async function uploadDraftImage(item, sendChunk) {
+    uploading.set(item.id, 0); renderAttachments(); const idle = sendLabel?.textContent;
+    const update = fraction => {
+      uploading.set(item.id, fraction);
+      const row = attachments.querySelector(`[data-draft-id="${item.id}"]`); if (row) showUploadProgress(row, fraction);
+      if (sendLabel) sendLabel.textContent = `Lade hoch… ${Math.round(fraction * 100)} %`;
+    };
+    try { return await uploadImageChunks(item.file, sendChunk, update); }
+    finally { uploading.delete(item.id); if (sendLabel && idle !== undefined) sendLabel.textContent = idle; renderAttachments(); }
+  }
+  const addImages = selected => { if (sending) { notice('A message is being sent; add images afterwards.'); return; } if (!supportsImages()) { notice('This agent does not yet support image uploads. Your files were not sent.'); return; } try { mediaDrafts.add(activeDraftKey, selected); renderAttachments(); } catch (error) { notice(error.message); } };
   attach.onclick = () => files.click();
   files.onchange = () => { addImages(files.files); files.value = ''; };
   input.addEventListener('paste', event => { const images = [...event.clipboardData.files]; if (images.length) { event.preventDefault(); addImages(images); } });
@@ -541,7 +565,7 @@ export async function mountWorkspace({ request, notice, markdown }) {
     // The agent's history contains these exact submissions: delivered even if the HTTP
     // answer failed. Drop the unresolved attempt and draft so the composer does not
     // keep (and re-offer) a message that is already in the chat.
-    for (const receipt of delivered) reconcileDelivered(selection.agentId, selection.streamId, receipt);
+    for (const receipt of delivered) { reconcileDelivered(selection.agentId, selection.streamId, receipt); for (const preview of receipt.previews ?? []) URL.revokeObjectURL(preview.url); }
     if (!warmPage) acceptedMessages.set(receiptKey, pendingAccepted);
     const signature = JSON.stringify([conversation, pendingAccepted]);
     if (selection.signature !== signature) {
@@ -587,11 +611,13 @@ export async function mountWorkspace({ request, notice, markdown }) {
       for (const tool of conversation.activity?.executions ?? []) fragment.append(renderLiveTool(tool));
       if (conversation.activity?.text) { const row = node('article', undefined, 'message assistant'); row.append(markdown(conversation.activity.text)); fragment.append(row); }
       for (const receipt of pendingAccepted) {
-        const row = node('article', undefined, 'message user');
-        row.append(node('p', receipt.text), node('small', receipt.unconfirmed ? 'Zustellung unbestätigt · wird nicht automatisch erneut gesendet' : receipt.mode === 'followUp' ? 'Follow-up eingereiht · wartet auf PI' : receipt.mode === 'steer' ? 'Steuerung angenommen · wirkt nach dem laufenden Schritt' : 'Angenommen · wartet auf PI-Verlauf', 'workspace-context'));
+        const row = node('article', undefined, 'message user ui-chat-message pending-receipt');
+        if (receipt.text) row.append(node('p', receipt.text));
+        if (receipt.previews?.length) { const pictures = node('div', undefined, 'tui-receipt-images'); for (const preview of receipt.previews) { const image = node('img'); image.src = preview.url; image.alt = preview.name; pictures.append(image); } row.append(pictures); }
+        row.append(node('small', receipt.unconfirmed ? 'Zustellung unbestätigt · wird nicht automatisch erneut gesendet' : receipt.mode === 'followUp' ? 'Follow-up eingereiht · wartet auf PI' : receipt.mode === 'steer' ? 'Steuerung angenommen · wirkt nach dem laufenden Schritt' : 'Angenommen · wartet auf PI-Verlauf', 'tui-receipt'));
         fragment.append(row);
       }
-      if (conversation.activity) fragment.append(node('p', Object.entries(conversation.activity.tools ?? {}).filter(([, count]) => count).map(([name, count]) => `${name} ×${count}`).join(' · ') || 'Target is working…', 'workspace-context'));
+      if (conversation.activity) fragment.append(node('p', Object.entries(conversation.activity.tools ?? {}).filter(([, count]) => count).map(([name, count]) => `${name} ×${count}`).join(' · ') || 'Target is working…', 'workspace-context tui-working'));
       body.replaceChildren(fragment);
       // Re-attaching the viewport resets scrollTop; restore position only after the
       // rows were measured, otherwise estimates land the view in the middle.
@@ -913,7 +939,7 @@ export async function mountWorkspace({ request, notice, markdown }) {
     popup(event, items);
   }
   function globalMenu(event) {
-    const items = [['Global settings', () => settingsDialog('global')], ['Archived / deleted items', () => dialog('Restore items', list => {
+    const items = [['Appearance', () => openAppearance(message => notice(message))], ['Global settings', () => settingsDialog('global')], ['Archived / deleted items', () => dialog('Restore items', list => {
       for (const [kind, values] of [['projects', state.projects], ['streams', state.streams]]) for (const value of values.filter(v => v.archived || v.deleted)) list.append(button(`Restore ${value.title}`, async () => { await change(kind, value.id, { archived: false, deleted: false }); list.close(); }));
     })]];
     if (capabilities.credentials === 1) items.push(['Credentials', credentialsDialog]);
@@ -1080,7 +1106,7 @@ export async function mountWorkspace({ request, notice, markdown }) {
           try { attempt = JSON.parse(sessionStorage.getItem(key)); if (attempt) text.value = attempt.text; } catch { /* Browser drafts are not authority. */ }
           form.onsubmit = event => { event.preventDefault(); run(async () => {
             if (!text.value.trim()) return;
-            if (attempt && attempt.text !== text.value.trim()) throw Error('An earlier send is unconfirmed. Reconcile it before changing the message.');
+            if (attempt && attempt.text !== text.value.trim()) attempt = undefined; // a changed message replaces the unconfirmed one, it never blocks
             attempt ??= { action: 'send', streamId: stream.id, id: crypto.randomUUID(), text: text.value.trim() };
             sessionStorage.setItem(key, JSON.stringify(attempt)); submit.disabled = true;
             try { await remote('messages', attempt); text.value = ''; attempt = undefined; sessionStorage.removeItem(key); content.append(node('p', 'Accepted by target. Reopen the stream to refresh its reply.')); }
@@ -1093,7 +1119,7 @@ export async function mountWorkspace({ request, notice, markdown }) {
   }
   let attempts = new Map();
   try { attempts = new Map(JSON.parse(sessionStorage.getItem('workspace.pending') ?? '[]')); } catch { /* Corrupt browser preferences do not alter domain state. */ }
-  composer.onsubmit = event => { event.preventDefault(); if (sending || remoteSelection?.stale) return; sending = true; send.disabled = true; run(async () => {
+  composer.onsubmit = event => { event.preventDefault(); if (sending || remoteSelection?.stale) return; sending = true; send.disabled = true; renderAttachments(); run(async () => {
     try {
     if (!input.value.trim() && !mediaDrafts.list(activeDraftKey).length) return;
     if (mediaDrafts.list(activeDraftKey).length && !supportsImages()) throw Error('This conversation does not support images; files retained, nothing sent');
@@ -1123,7 +1149,8 @@ export async function mountWorkspace({ request, notice, markdown }) {
           attempt = undefined;
         }
       }
-      if (attempt && (attempt.imageDraftIdentity ?? '') !== imageDraftIdentity) throw Error('Image selection changed while an earlier send is unresolved. Reconcile that send before sending different attachments.');
+      // A changed image selection (or text, below) replaces an unconfirmed earlier attempt with a new submission; it never blocks the composer.
+      if (attempt && (attempt.imageDraftIdentity ?? '') !== imageDraftIdentity) attempt = undefined;
       attempt ??= { id: crypto.randomUUID(), creationKey: crypto.randomUUID(), text };
       if (attempt.text !== text) {
         // Explicit operator policy: a different draft discards the old attempt,
@@ -1153,7 +1180,8 @@ export async function mountWorkspace({ request, notice, markdown }) {
         const receipts = acceptedMessages.get(receiptKey) ?? [];
         let receipt = receipts.find(item => item.id === attempt.id);
         if (!receipt && text.trim() !== '/reload') {
-          receipt = { id: attempt.id, text, mode: submittedMode, previousIds, unconfirmed: true };
+          // The draft previews are released once the send is done; the receipt keeps its own copies so the sent images stay visible.
+          receipt = { id: attempt.id, text, mode: submittedMode, previousIds, unconfirmed: true, previews: submittedImages.map(item => ({ url: URL.createObjectURL(item.file), name: item.file.name })) };
           receipts.push(receipt);
         }
         acceptedMessages.set(receiptKey, receipts);
@@ -1166,7 +1194,7 @@ export async function mountWorkspace({ request, notice, markdown }) {
         if (submittedImages.length && !attempt.attachments) {
           attempt.imageDraftIdentity = imageDraftIdentity;
           const uploaded = [];
-          for (const item of submittedImages) uploaded.push(await uploadImageChunks(item.file, chunk => peerRequest(agentId, 'messages', { action: 'media-chunk', streamId: remoteId, chunk })));
+          for (const item of submittedImages) uploaded.push(await uploadDraftImage(item, chunk => peerRequest(agentId, 'messages', { action: 'media-chunk', streamId: remoteId, chunk })));
           attempt.attachments = uploaded;
         }
         const delivery = await peerRequest(agentId, 'messages', { action: 'send', streamId: remoteId, id: attempt.id, text, ...(attempt.attachments?.length ? { attachments: attempt.attachments } : {}), ...(agentRoster.find(agent => agent.id === agentId)?.features?.includes('pi-live-v1') && submittedMode ? { mode: submittedMode } : {}) });
@@ -1186,8 +1214,8 @@ export async function mountWorkspace({ request, notice, markdown }) {
     const text = input.value.trim(), submittedProject = projectId, submittedNavigation = navigationRevision;
     if (!id) {
       const key = `create:local:${projectId ?? 'standalone'}`;
-      const creation = attempts.get(key) ?? { creationKey: crypto.randomUUID(), text };
-      if (creation.text !== text) throw Error('Retry the previous unconfirmed input before sending different work');
+      let creation = attempts.get(key);
+      if (!creation || creation.text !== text) creation = { creationKey: crypto.randomUUID(), text }; // different input: a new creation, never blocked by the old one
       attempts.set(key, creation); sessionStorage.setItem('workspace.pending', JSON.stringify([...attempts]));
       const stream = await request('/api/workspace/streams', { projectId: projectId ?? null, title: text.slice(0, 72), idempotencyKey: creation.creationKey });
       id = stream.id;
@@ -1197,20 +1225,20 @@ export async function mountWorkspace({ request, notice, markdown }) {
       attempts.delete(key); sessionStorage.setItem('workspace.pending', JSON.stringify([...attempts]));
       if (navigationRevision === submittedNavigation) { streamId = id; await refresh(); }
     }
-    const attempt = attempts.get(id) ?? { id: crypto.randomUUID(), text, imageDraftIdentity };
-    if ((attempt.imageDraftIdentity ?? '') !== imageDraftIdentity) throw Error('Image selection changed while an earlier send is unresolved; reconcile it first');
-    if (attempt.text !== text) throw Error('Retry the previous unconfirmed input before sending different work');
+    let attempt = attempts.get(id);
+    // Same text and images: replay the unconfirmed attempt (same id, the agent deduplicates). Anything else is a new submission.
+    if (!attempt || attempt.text !== text || (attempt.imageDraftIdentity ?? '') !== imageDraftIdentity) attempt = { id: crypto.randomUUID(), text, imageDraftIdentity };
     attempts.set(id, attempt); sessionStorage.setItem('workspace.pending', JSON.stringify([...attempts])); send.disabled = true;
     if (mediaDrafts.list(submittedDraft).length && !attempt.attachments) {
       const uploaded = [];
-      for (const item of submittedImages) uploaded.push(await uploadImageChunks(item.file, chunk => request(`/api/workspace/streams/${id}/media`, chunk)));
+      for (const item of submittedImages) uploaded.push(await uploadDraftImage(item, chunk => request(`/api/workspace/streams/${id}/media`, chunk)));
       attempt.attachments = uploaded;
     }
     try { await request(`/api/workspace/streams/${id}/messages`, attempt); attempts.delete(id); clearSentDraft(submittedDraft, text); for (const item of submittedImages) mediaDrafts.remove(submittedDraft, item.id); renderAttachments();
       if (projectId === submittedProject && navigationRevision === submittedNavigation) { if (input.value.trim() === text) input.value = ''; await refresh(); await selectStream(id); }
     }
     finally { sessionStorage.setItem('workspace.pending', JSON.stringify([...attempts])); send.disabled = false; }
-    } finally { sending = false; renderTargets(); }
+    } finally { sending = false; renderTargets(); /* renderTargets -> syncDraft redraws the attachments, unlocking them */ }
   })(); };
   input.onkeydown = event => { if (event.key === 'Enter' && !event.shiftKey && !event.isComposing) { event.preventDefault(); composer.requestSubmit(); } };
   window.addEventListener('beforeunload', () => events?.close());

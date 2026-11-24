@@ -13,7 +13,7 @@ import { Textarea } from './shadcn/textarea';
 function Shell() {
   return <>
     <aside aria-label="Conversations">
-      <div className="brand">hayate <span>local</span></div>
+      <div className="brand"><b id="brand-name">hayate</b> <span>local</span></div>
       <Button id="new" type="button" className="w-full justify-start">＋ New conversation</Button>
       <Input id="search" type="search" placeholder="Find a conversation" aria-label="Find a conversation" />
       <nav id="chats" aria-label="Conversation list" />
@@ -25,6 +25,7 @@ function Shell() {
         <div className="actions">
           <Button id="rename" type="button" variant="outline" size="sm" title="Rename conversation">Rename</Button>
           <Button id="export" type="button" variant="outline" size="sm" title="Export conversation as Markdown">Export</Button>
+          <Button id="appearance" type="button" variant="outline" size="sm" title="Colours and names">Appearance</Button>
           <Button id="theme" type="button" variant="outline" size="icon" aria-label="Switch color scheme">◐</Button>
         </div>
       </header>

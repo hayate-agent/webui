@@ -10,6 +10,8 @@ import { createAccountMenu } from './account-menu.js';
 import { styleAuthDialogs } from './auth-style.js';
 import { mountPi } from './pi-client.js';
 import { setupMobileNavigation } from './mobile-nav.js';
+import { preferences, applyToPage } from './preferences.js';
+import { openAppearance } from './appearance.js';
 
 mountShell();
 const $ = id => document.getElementById(id);
@@ -104,13 +106,14 @@ function messageNode(message) {
   const copyButton = button('Copy', () => copy(message.text, copyButton));
   tools.append(copyButton); node.append(tools); return node;
 }
+let serverUI;
+function showPreferences() { applyToPage(preferences.value, { fallbackTitle: serverUI?.title ? `${serverUI.title} · WebUI` : 'Hayate · WebUI', serverMode: serverUI?.theme }); }
+preferences.onChange(showPreferences); showPreferences();
 function applyUI(ui, active) {
   if (!ui) return;
-  const theme = localStorage.getItem('hayate.webui.theme') || ui.theme;
-  if (theme === 'system') delete document.body.dataset.theme;
-  else document.body.dataset.theme = theme;
+  // The operator's own preferences (server-side) win; the agent's presentation settings are the default.
+  serverUI = ui; showPreferences();
   $('input').placeholder = ui.placeholder;
-  document.title = `${ui.title} · WebUI`;
   $('activity').hidden = ui.workArea === 'hidden' || (ui.workArea === 'auto' && !active);
   $('activity').style.maxHeight = `${ui.workAreaRows * 1.65}em`;
   const signature = JSON.stringify({ panels: ui.panels, actions: ui.actions });
@@ -226,11 +229,11 @@ view.addEventListener('scroll', () => {
 function latest() { follow = true; view.scrollTop = view.scrollHeight; $('latest').hidden = true; }
 $('latest').onclick = latest;
 document.addEventListener('keydown', event => { if (event.ctrlKey && event.key === 'End') { event.preventDefault(); latest(); } });
-$('theme').onclick = () => {
+$('theme').onclick = guarded(async () => {
   const dark = document.body.dataset.theme ? document.body.dataset.theme === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches;
-  document.body.dataset.theme = dark ? 'light' : 'dark';
-  localStorage.setItem('hayate.webui.theme', document.body.dataset.theme);
-};
+  await preferences.update({ mode: dark ? 'light' : 'dark' });
+});
+$('appearance').onclick = () => openAppearance(notice);
 $('rename').onclick = () => {
   if (!conversation) return;
   $('rename-input').value = conversation.title; $('rename-dialog').showModal();
@@ -254,8 +257,7 @@ async function init() {
   // Central PI hosts are normal workspace conversations. Do not mount a
   // second modal/side-panel client for the same authenticated remote host.
   setInterval(() => { if (!document.hidden) void checkIdentity().catch(() => {}); }, 10000);
-  const theme = localStorage.getItem('hayate.webui.theme');
-  if (['light', 'dark'].includes(theme)) document.body.dataset.theme = theme;
+  await preferences.load();
   try { for (const [id, attempt] of JSON.parse(sessionStorage.getItem('hayate.webui.pending') ?? '[]')) { pending.set(id, attempt); drafts.set(id, attempt.text); } } catch { /* Ignore damaged browser preferences. */ }
   const state = await request('/api/state'); list = state.chats;
   // Reachable on every path (legacy or workspace): the drawer is the only conversation list on mobile.
