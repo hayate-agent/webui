@@ -1,5 +1,5 @@
 {
-  "contentDigest": "6f56e71b5f22e30b3db7627613d5b86f607e37d322ec9fa314582d5cb46bfb6c",
+  "contentDigest": "50d7a7c9fa0003ab1f2610ef1a68bc04c9e1bf3120110bef61817c39f7692147",
   "files": [
     {
       "mode": "100644",
@@ -39,7 +39,7 @@
     {
       "mode": "100644",
       "path": "PUBLIC-SOURCE.json",
-      "sha256": "3089ff0fced456fbeba0b5f49306ff23578d9f850a909ffff9135c61894e9973"
+      "sha256": "9fc70fcfc2de5f0429e7e888eaf18c035d8805eeff05e0a33dc9a6a0fd8cd5dc"
     },
     {
       "mode": "100644",
@@ -99,7 +99,7 @@
     {
       "mode": "100644",
       "path": "dashboard/public/chat-surface.css",
-      "sha256": "4db53e0f00177066522cfe11163436e1f6d7833bf6ec3abb4058c40a31b5967b"
+      "sha256": "8565925e3ea58128a57ca01d21b804fbdea43e16a69fa012fa7d3215b9e6066b"
     },
     {
       "mode": "100644",
@@ -259,7 +259,7 @@
     {
       "mode": "100644",
       "path": "dashboard/public/ui/composer.jsx",
-      "sha256": "71209a5b851835c11dc5ae905e1a6af30b212e9ddab9828e8a2876701673a4b2"
+      "sha256": "a4e17d2de10d93d0ad98f7430a37b3035b8c8813fb62e37f60031b991f55700b"
     },
     {
       "mode": "100644",
@@ -369,7 +369,7 @@
     {
       "mode": "100644",
       "path": "dashboard/public/workspace-client.js",
-      "sha256": "02e14ea13ea4fdbc5083c586f0d79fca9d38ddd75ac32b08a81f9325dc3213ed"
+      "sha256": "d267ae0c67ef2e6a1a27b956dd0167bb12fafc20062f2cdf5e90fa2d965d1a09"
     },
     {
       "mode": "100644",
@@ -454,7 +454,7 @@
     {
       "mode": "100644",
       "path": "package.json",
-      "sha256": "f0c59e58cae5fa5a05208f252b58665773a811e977c626e03c05efb6c0067a43"
+      "sha256": "d11e6ff79da8e24b00eb1d5ca8056bd5ec7026a5bc1c56e9cce8b528fb34ee6c"
     },
     {
       "mode": "100644",
@@ -635,6 +635,11 @@
       "mode": "100644",
       "path": "test/command-channel.test.mjs",
       "sha256": "c68f82388299cc2fd276f229c9b2cbf44c62aac39abc2bbf40ebb0503ee74554"
+    },
+    {
+      "mode": "100644",
+      "path": "test/composer-toolbar.browser.mjs",
+      "sha256": "5d37bb27c6f3af76439250949f4a9ca37702b83cdc5454f09dc3412ba2104d0b"
     },
     {
       "mode": "100644",
@@ -1014,5 +1019,5 @@
   ],
   "historyPolicy": "fresh public snapshot; no private ancestry or source author metadata",
   "schema": 1,
-  "sourceSHA": "be11c098679641799016458d2ef8a1342b8305d2"
+  "sourceSHA": "6a52ac8cd8b8c430ae7e6fbd0100089cee082164"
 }

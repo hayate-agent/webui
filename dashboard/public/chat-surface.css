@@ -32,10 +32,14 @@ body .workspace-screen .bui-composer{background:var(--bg);border:1px solid var(-
 .bui-composer-caption span:last-child{font-weight:400;letter-spacing:0;text-transform:none}
 body .bui-composer textarea{min-height:76px;padding:4px 0;font-size:15px}
 body .bui-composer .ui-composer-toolbar{border-top:1px solid var(--line);padding-top:12px;margin-top:8px}
-body .bui-composer button[type=submit]{height:36px;min-width:102px;border-radius:10px;gap:10px}
+body .bui-composer button[type=submit]{height:36px;min-width:44px;padding:0 12px;border-radius:10px;gap:8px}
+body .bui-composer .ui-send-label{display:none}
+body .bui-composer button[type=submit][data-uploading] .ui-send-label{display:inline;white-space:nowrap}
 body .bui-composer .ui-composer-hint{font-size:10px}
+/* The keyboard hint only fits (and only matters) with a wide window and a keyboard: never let it squeeze into a one-word column. */
+@media(max-width:1100px),(pointer:coarse){body .bui-composer .ui-composer-hint{display:none}}
 @media(min-width:1200px){}
-@media(max-width:760px){body .workspace-screen>header{padding:12px 16px;grid-template-columns:minmax(0,1fr) 36px}body .workspace-screen>header .agent-picker{justify-self:start;max-width:100%;grid-column:1;grid-row:auto}body .workspace-screen>header .agent-picker:nth-of-type(2){grid-column:2;min-width:0}body .workspace-screen>header{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}body .workspace-screen>header>button{grid-column:2;grid-row:1}body .workspace-screen>header .agent-picker select{max-width:100%}body .workspace-screen>header h1{font-size:18px}body .workspace-content{padding:20px 12px}body .ui-composer-host{padding:8px 12px 12px}body .workspace-screen .bui-composer{padding:12px 14px;border-radius:16px}body .bui-composer textarea{min-height:58px}body .bui-composer button[type=submit]{min-width:86px}.bui-composer-caption{font-size:9px}}
+@media(max-width:760px){body .workspace-screen>header{padding:12px 16px;grid-template-columns:minmax(0,1fr) 36px}body .workspace-screen>header .agent-picker{justify-self:start;max-width:100%;grid-column:1;grid-row:auto}body .workspace-screen>header .agent-picker:nth-of-type(2){grid-column:2;min-width:0}body .workspace-screen>header{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}body .workspace-screen>header>button{grid-column:2;grid-row:1}body .workspace-screen>header .agent-picker select{max-width:100%}body .workspace-screen>header h1{font-size:18px}body .workspace-content{padding:20px 12px}body .ui-composer-host{padding:8px 12px 12px}body .workspace-screen .bui-composer{padding:12px 14px;border-radius:16px}body .bui-composer textarea{min-height:58px}.bui-composer-caption{font-size:9px}}
 /* Transcript in the style of PI's TUI: flowing assistant text, tinted user block, compact tool lines. */
 body .workspace-content .ui-chat-message{border:0;background:none;box-shadow:none;border-radius:0;padding:0;margin:0 0 14px;max-width:none;line-height:1.65;font-size:14.5px}
 body .workspace-content .ui-chat-message.user{background:var(--user);border-radius:6px;padding:8px 14px;margin:18px 0 14px}
