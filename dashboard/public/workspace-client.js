@@ -120,14 +120,14 @@ export async function mountWorkspace({ request, notice, markdown }) {
   }
   const sendLabel = send.querySelector('span');
   async function uploadDraftImage(item, sendChunk) {
-    uploading.set(item.id, 0); renderAttachments(); const idle = sendLabel?.textContent;
+    uploading.set(item.id, 0); renderAttachments(); send.dataset.uploading = ''; const idle = sendLabel?.textContent;
     const update = fraction => {
       uploading.set(item.id, fraction);
       const row = attachments.querySelector(`[data-draft-id="${item.id}"]`); if (row) showUploadProgress(row, fraction);
       if (sendLabel) sendLabel.textContent = `Lade hoch… ${Math.round(fraction * 100)} %`;
     };
     try { return await uploadImageChunks(item.file, sendChunk, update); }
-    finally { uploading.delete(item.id); if (sendLabel && idle !== undefined) sendLabel.textContent = idle; renderAttachments(); }
+    finally { uploading.delete(item.id); if (!uploading.size) delete send.dataset.uploading; if (sendLabel && idle !== undefined) sendLabel.textContent = idle; renderAttachments(); }
   }
   const addImages = selected => { if (sending) { notice('A message is being sent; add images afterwards.'); return; } if (!supportsImages()) { notice('This agent does not yet support image uploads. Your files were not sent.'); return; } try { mediaDrafts.add(activeDraftKey, selected); renderAttachments(); } catch (error) { notice(error.message); } };
   attach.onclick = () => files.click();
