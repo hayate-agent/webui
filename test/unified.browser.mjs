@@ -12,7 +12,7 @@ const state = { agent: 'Primary Agent', projects: [project], streams: [
 ], roots: ['/work'], settings: {} };
 const peer = { projects: [{ ...project, id: 'peer-project', title: 'Remote work' }], streams: [{ id: 'peer-chat', projectId: 'peer-project', title: 'Remote conversation', updatedAt: 1, cwd: '/remote', features: ['image-prompt-v1'], messages: [] }], features: ['read-markers', 'idempotent-stream-create'] };
 const calls = []; const eventClients = new Set();
-let loseNextSendAck = false;
+let failNextSendUnaccepted = false, loseNextSendAck = false;
 const acceptedSubmissions = new Set();
 const backend = createServer(async (req, res) => {
   const chunks = []; for await (const chunk of req) chunks.push(chunk);
@@ -38,6 +38,7 @@ const backend = createServer(async (req, res) => {
     if (capability === 'messages' && action.action === 'read') return json(peer.streams.find(s => s.id === action.streamId));
     if (capability === 'messages' && action.action === 'submission-status') return json({ status: acceptedSubmissions.has(action.id) ? 'accepted' : 'unknown' });
     if (capability === 'messages' && action.action === 'send') {
+      if (failNextSendUnaccepted) { failNextSendUnaccepted = false; res.statusCode = 503; return json({ error: 'fixture agent unreachable' }); }
       acceptedSubmissions.add(action.id);
       peer.streams.find(s => s.id === action.streamId).messages.push({ role: 'user', text: action.text });
       if (loseNextSendAck) { loseNextSendAck = false; res.statusCode = 503; return json({ error: 'fixture lost acknowledgement' }); }
@@ -235,7 +236,7 @@ try {
   assert.ok((await page.locator('.workspace-content').innerText()).includes('Send only to Che'));
   await page.getByLabel('Next project step').fill('Remote fork only');
   await page.locator('input[type=file]').setInputFiles({ name: 'pixel.png', mimeType: 'image/png', buffer: validPng });
-  await page.getByRole('img', { name: 'pixel.png' }).waitFor();
+  await page.locator('.ui-attachment').getByRole('img', { name: 'pixel.png' }).waitFor();
   await page.getByRole('button', { name: 'Send ↑', exact: true }).click();
   await page.waitForFunction(() => [...document.querySelectorAll('.workspace-content article')].some(e => e.textContent.includes('Remote fork only')));
   assert.equal(peer.streams[0].messages.length, 1);
@@ -244,7 +245,7 @@ try {
   const mediaSend = calls.find(call => call.input?.input?.action === 'send' && call.input.input.attachments?.length);
   assert.equal(mediaSend.input.input.attachments[0].id, 'fixture-image', 'mounted composer sends staged attachment reference');
   assert.ok(calls.some(call => call.input?.input?.action === 'media-chunk'), 'mounted composer uploads image bytes before send');
-  assert.equal(await page.getByRole('img', { name: 'pixel.png' }).count(), 0, 'accepted send clears only its image draft');
+  assert.equal(await page.locator('.ui-attachment').getByRole('img', { name: 'pixel.png' }).count(), 0, 'accepted send clears only its image draft');
   assert.ok(calls.find(c => c.input?.input?.action === 'fork').input.input.idempotencyKey);
   // Accepted input with a lost acknowledgement must reconcile before comparing
   // changed image drafts, and must never resend or clear the new image.
@@ -258,9 +259,23 @@ try {
   await page.getByRole('button', { name: 'Send ↑', exact: true }).click();
   await page.waitForFunction(() => !document.querySelector('.workspace-composer button[type=submit]')?.disabled);
   assert.equal(calls.filter(c => c.input?.input?.action === 'send').length, sendsBeforeReconcile, 'accepted unknown send is not replayed');
-  assert.equal(await page.getByRole('img', { name: 'accepted.png', exact: true }).count(), 0);
-  assert.equal(await page.getByRole('img', { name: 'new-draft.png', exact: true }).count(), 1, 'new image survives receipt reconciliation');
+  assert.equal(await page.locator('.ui-attachment').getByRole('img', { name: 'accepted.png', exact: true }).count(), 0);
+  assert.equal(await page.locator('.ui-attachment').getByRole('img', { name: 'new-draft.png', exact: true }).count(), 1, 'new image survives receipt reconciliation');
+  // A send that never reached the agent leaves an unconfirmed attempt. It must never block the composer: a different message
+  // (here: other text and other images) goes out as a new submission without the operator clearing anything by hand.
   await page.getByRole('button', { name: 'Remove new-draft.png', exact: true }).click();
+  await page.getByLabel('Next project step').fill('Stuck first');
+  failNextSendUnaccepted = true;
+  await page.getByRole('button', { name: 'Send ↑', exact: true }).click();
+  await page.waitForFunction(() => !document.querySelector('.workspace-composer button[type=submit]')?.disabled);
+  const stuckId = calls.filter(c => c.input?.input?.action === 'send').at(-1).input.input.id;
+  await page.getByLabel('Next project step').fill('Different second');
+  await page.locator('input[type=file]').setInputFiles({ name: 'other.png', mimeType: 'image/png', buffer: validPng });
+  await page.getByRole('button', { name: 'Send ↑', exact: true }).click();
+  await page.waitForFunction(() => !document.querySelector('.workspace-composer button[type=submit]')?.disabled && document.querySelector('.workspace-composer textarea').value === '');
+  const second = calls.filter(c => c.input?.input?.action === 'send').at(-1).input.input;
+  assert.equal(second.text, 'Different second', 'a different message is sent although an earlier one is unconfirmed');
+  assert.notEqual(second.id, stuckId, 'as a new submission');
   // Exercise the actual mounted chat under failed background reads. No send
   // request may be replayed; the editor and rendered history remain usable.
   await page.getByLabel('Next project step').fill('Keep this unsent draft');

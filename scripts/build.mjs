@@ -1,4 +1,5 @@
 import { compile } from '@tailwindcss/node';
+import { themesCss } from './themes-css.mjs';
 import { resolve } from 'node:path';
 import { build } from 'esbuild';
 import { mkdir, copyFile, readFile, writeFile, readdir } from 'node:fs/promises';
@@ -27,7 +28,8 @@ await writeFile('dist/public/build-info.json', JSON.stringify(webuiVersion({ git
 // always beat layered ones, which silently disabled every shadcn utility class on elements the
 // legacy sheets also style (measured: radius/border/height stayed legacy). The order statement is
 // repeated in each sheet so the layer order is fixed whichever sheet loads first.
-for (const file of ['style.css', 'workspace-polish.css', 'chat-output.css', 'chat-surface.css', 'mobile.css']) {
-  const css = await readFile('dashboard/public/' + file, 'utf8');
+const generated = { 'themes.css': themesCss() };
+for (const file of ['style.css', 'themes.css', 'workspace-polish.css', 'chat-output.css', 'chat-surface.css', 'mobile.css']) {
+  const css = generated[file] ?? await readFile('dashboard/public/' + file, 'utf8');
   await writeFile('dist/public/' + file, `@layer legacy, theme, base, components, utilities;\n@layer legacy {\n${css}\n}\n`);
 }

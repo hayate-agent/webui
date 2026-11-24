@@ -9,6 +9,7 @@ let chunkRequests = 0, pageBytesHaveImage = false;
 const backend = createServer(async (req, res) => {
  res.setHeader('content-type', 'application/json'); const out = value => res.end(JSON.stringify(value));
  if (req.url === '/api/auth') return out({ required: false, authenticated: true });
+ if (req.url === '/api/preferences') return out({ theme: 'green', mode: 'system', pageTitle: '', headerTitle: '', hidden: [], revision: 0 });
  if (req.url === '/api/state') return out({ agent: 'Central', backends: { workspaces: 1 }, chats: [] });
  if (req.url === '/api/workspace/capabilities') return out({ workspaces: 1, 'agent-hub': 1 });
  if (req.url === '/api/workspace/state') return out({ agent: 'Central', projects: [], streams: [], settings: {} });
