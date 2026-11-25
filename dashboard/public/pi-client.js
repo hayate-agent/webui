@@ -1,4 +1,5 @@
 import { styleControl } from './ui/control-class.js';
+import { pickDirectory } from './dir-picker.js';
 // PI remains an independent backend beside Hayate, never a replacement toggle.
 export async function mountPi({ request, markdown, label = 'Local PI', poll = false }) {
   let initial;
@@ -75,7 +76,7 @@ export async function mountPi({ request, markdown, label = 'Local PI', poll = fa
   const open = async session => { liveText = ''; dialogNodes.clear(); dialogs.replaceChildren(); selected = session.id; title.textContent = `${session.name} · ${session.cwd}`; transcript.replaceChildren(); status.textContent = ''; if (!view.open) view.showModal(); await refresh(); };
   const renderList = sessions => list.replaceChildren(...sessions.map(session => button(`${session.name} · ${session.owner} · ${session.cwd}`, () => open(session))));
   const create = button('＋ New PI session', async () => {
-    const cwd = window.prompt('PI working directory (inside configured roots)', initial.roots[0]);
+    const cwd = await pickDirectory(path => request(path ? `/api/pi/dirs?path=${encodeURIComponent(path)}` : '/api/pi/dirs'));
     if (!cwd) return;
     const result = await request('/api/pi/sessions', { cwd });
     const next = await request('/api/pi/sessions'); renderList(next.sessions);

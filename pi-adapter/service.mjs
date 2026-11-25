@@ -3,7 +3,7 @@ import { createHash } from 'node:crypto';
 import http from 'node:http';
 import { createMediaStore, validatePromptImages } from './media.mjs';
 import { verifyDecodedImage } from './media-decode.mjs';
-import { realpath, stat } from 'node:fs/promises';
+import { readdir, realpath, stat } from 'node:fs/promises';
 import path from 'node:path';
 import { homedir } from 'node:os';
 import { createOwnerServer } from './owner-server.mjs';
@@ -185,6 +185,26 @@ export async function createPiService({ directory, roots, port = 0, executable =
       }
       if (url.pathname === '/api/pi/sessions' && req.method === 'GET') {
         await catalog.refresh(); return json(200, { sessions: list(), roots: allowed });
+      }
+      if (url.pathname === '/api/pi/dirs' && req.method === 'GET') {
+        // Folder picker: only directories, only inside the configured roots, bounded.
+        const inside = target => allowed.some(root => target === root || !path.relative(root, target).startsWith('..') && !path.isAbsolute(path.relative(root, target)));
+        const requested = url.searchParams.get('path');
+        if (!requested) return json(200, { roots: allowed });
+        let directory; try { directory = await realpath(requested); } catch { return json(404, { error: 'Directory not found' }); }
+        if (!inside(directory)) return json(403, { error: 'Workspace outside allowed roots' });
+        const names = await readdir(directory, { withFileTypes: true }).catch(() => []);
+        const entries = [];
+        for (const entry of names.sort((a, b) => a.name.localeCompare(b.name))) {
+          if (entry.name.startsWith('.')) continue;
+          const full = path.join(directory, entry.name);
+          const real = await realpath(full).catch(() => undefined);
+          if (!real || !inside(real) || !(await stat(real).catch(() => undefined))?.isDirectory()) continue;
+          entries.push({ name: entry.name, path: real });
+          if (entries.length >= 500) break;
+        }
+        const parent = path.dirname(directory);
+        return json(200, { directory, parent: directory !== parent && inside(parent) ? parent : null, entries });
       }
       let body = {};
       if (req.method === 'POST') {
