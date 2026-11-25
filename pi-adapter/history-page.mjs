@@ -7,6 +7,10 @@ export function boundedArguments(args) {
  const entries = Object.entries(args).sort(([a], [b]) => (keys.includes(a) ? 0 : 1) - (keys.includes(b) ? 0 : 1));
  return Object.fromEntries(entries.slice(0, 8).map(([key, value]) => [key.slice(0, 80), typeof value === 'string' ? value.slice(0, 1000) : String(JSON.stringify(value) ?? '').slice(0, 300)]));
 }
+export function imageSummaries(blocks) {
+ const images = blocks.filter(block => block.type === 'image');
+ return images.length ? images.slice(0, 4).map(block => ({ mimeType: String(block.mimeType ?? '').slice(0, 40), bytes: Math.max(0, Math.floor((block.data?.length ?? 0) * 3 / 4) - (/=*$/.exec(block.data ?? '')[0].length)) })) : undefined;
+}
 export function projectMessage(entry, budget = 100000) {
  const source = entry.message, blocks = Array.isArray(source.content) ? source.content : [];
  const message = { id: entry.id, role: source.role, timestamp: entry.timestamp ?? source.timestamp,
@@ -14,7 +18,7 @@ export function projectMessage(entry, budget = 100000) {
   ...(source.role === 'assistant' ? { thinking: blocks.filter(block => block.type === 'thinking').map(block => block.thinking ?? '').join('\n').slice(-12000), toolCalls: blocks.filter(block => block.type === 'toolCall').slice(-4).map(block => ({ id: block.id, name: block.name, arguments: boundedArguments(block.arguments) })) } : {}),
   ...(source.role === 'toolResult' ? { toolCallId: source.toolCallId, toolName: source.toolName, isError: source.isError === true, ...(Number.isFinite(source.durationMs) ? { durationMs: source.durationMs } : {}) } : {}),
   // Image bytes never travel in a page (bounded frames); the client shows what exists.
-  ...(blocks.some(block => block.type === 'image') ? { images: blocks.filter(block => block.type === 'image').slice(0, 4).map(block => ({ mimeType: String(block.mimeType ?? '').slice(0, 40), bytes: Math.max(0, Math.floor((block.data?.length ?? 0) * 3 / 4) - (/=*$/.exec(block.data ?? '')[0].length)) })) } : {}) };
+  ...(imageSummaries(blocks) ? { images: imageSummaries(blocks) } : {}) };
  while (Buffer.byteLength(JSON.stringify(message)) > budget && (message.text.length > 100 || message.thinking?.length > 100)) {
   message.text = message.text.slice(-Math.max(100, Math.floor(message.text.length / 2)));
   if (message.thinking) message.thinking = message.thinking.slice(-Math.max(100, Math.floor(message.thinking.length / 2)));

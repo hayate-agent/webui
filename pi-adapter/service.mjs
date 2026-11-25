@@ -10,7 +10,7 @@ import { createOwnerServer } from './owner-server.mjs';
 import { RpcOwner } from './rpc-owner.mjs';
 import { SessionCatalog } from './catalog.mjs';
 import { NativeHistoryReader } from './native-history-reader.mjs';
-import { historyPage, fitMessage, imageChunk } from './history-page.mjs';
+import { historyPage, fitMessage, imageChunk, imageSummaries } from './history-page.mjs';
 import { createEventLog, createPiEventNormalizer } from './event-log.mjs';
 
 export function projectEntries(entries, leafId) {
@@ -111,7 +111,19 @@ export async function createPiService({ directory, roots, port = 0, executable =
       page = await nativeHistory.page(id, nativeOwner.cwd, before);
       if (!page) throw Error('Legacy history unavailable; full snapshot refused to preserve active owner');
       page = { ...page, busy: true, busyUnknown: true, readOnly: false };
-    } else if (!worker && nativeOwner) page = await owners.command(id, 'snapshot-page', { before });
+    } else if (!worker && nativeOwner) {
+      page = await owners.command(id, 'snapshot-page', { before });
+      // A connector started before image history existed sends pages without `images`. The persisted
+      // session is the source of truth: add what the message really contains (read-only, bounded).
+      if (!nativeOwner.features.includes('history-images-v1') && page?.messages?.length) {
+        const entries = await nativeHistory.entries(id, nativeOwner.cwd).catch(() => null);
+        if (entries) {
+          const found = new Map();
+          for (const entry of entries) if (Array.isArray(entry.message?.content)) { const images = imageSummaries(entry.message.content); if (images) found.set(entry.id, images); }
+          if (found.size) page = { ...page, messages: page.messages.map(message => !message.images && found.has(message.id) ? { ...message, images: found.get(message.id) } : message) };
+        }
+      }
+    }
     else {
       const snapshot = id.startsWith('disk_') ? catalog.snapshot(id) : worker ? await worker.snapshot() : await owners.command(id, 'snapshot');
       page = { ...historyPage(snapshot.entries, snapshot.leafId, before), busy: snapshot.busy, readOnly: snapshot.readOnly, dialogs: snapshot.dialogs ?? [] };

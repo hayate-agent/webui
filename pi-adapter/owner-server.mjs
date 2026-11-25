@@ -32,7 +32,7 @@ export async function createOwnerServer(directory) {
         if (!owner) {
           if (record.type !== 'register' || typeof record.sessionId !== 'string' || !/^[a-zA-Z0-9_-]{1,128}$/.test(record.sessionId) || typeof record.cwd !== 'string' || !path.isAbsolute(record.cwd) || owners.has(record.sessionId)) return peer.destroy();
           clearTimeout(timeout);
-          owner = { id: record.sessionId, cwd: record.cwd, name: typeof record.name === 'string' ? record.name.slice(0, 300) : 'PI session', features: Array.isArray(record.features) ? ['reload-v1', 'history-page-v1', 'image-prompt-v1'].filter(feature => record.features.includes(feature)) : [], pending: new Map(), peer };
+          owner = { id: record.sessionId, cwd: record.cwd, name: typeof record.name === 'string' ? record.name.slice(0, 300) : 'PI session', features: Array.isArray(record.features) ? ['reload-v1', 'history-page-v1', 'image-prompt-v1', 'history-images-v1'].filter(feature => record.features.includes(feature)) : [], pending: new Map(), peer };
           owners.set(owner.id, owner);
           peer.write(JSON.stringify({ type: 'registered' }) + '\n'); events.emit('change');
         } else if (record.type === 'response' && typeof record.id === 'string') {

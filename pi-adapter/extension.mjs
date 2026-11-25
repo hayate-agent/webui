@@ -45,7 +45,7 @@ export default function piWebUIConnector(pi) {
       const peer = net.createConnection(path.join(directory, 'owners.sock'));
       socket = peer; peer.setEncoding('utf8'); let buffer = '';
       peer.on('connect', () => { connected = true; lastConnected = Date.now(); });
-      peer.on('connect', () => send({ type: 'register', sessionId: ctx.sessionManager.getSessionId(), cwd: ctx.cwd, name: ctx.sessionManager.getSessionName(), features: ['reload-v1', 'history-page-v1', 'image-prompt-v1'] }));
+      peer.on('connect', () => send({ type: 'register', sessionId: ctx.sessionManager.getSessionId(), cwd: ctx.cwd, name: ctx.sessionManager.getSessionName(), features: ['reload-v1', 'history-page-v1', 'image-prompt-v1', 'history-images-v1'] }));
       peer.on('error', () => {});
       peer.on('close', () => { if (socket === peer) { socket = undefined; if (connected) lastConnected = Date.now(); connected = false; } if (active) retry = setTimeout(connect, 5000); });
       peer.on('data', chunk => {
