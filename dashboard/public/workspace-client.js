@@ -138,7 +138,8 @@ export async function mountWorkspace({ request, notice, markdown }) {
   composer.addEventListener('drop', event => { if (event.dataTransfer.files.length) { event.preventDefault(); addImages(event.dataTransfer.files); } });
   const drafts = new Map(), acceptedMessages = new Map();
   let activeDraftKey;
-  const draftKey = () => remoteSelection ? JSON.stringify(['remote', remoteSelection.agentId, remoteSelection.streamId]) : JSON.stringify([browsingAgent ?? 'local', streamId ?? 'new', projectId ?? null]);
+  // A new chat has one draft, whichever agent is picked afterwards: text typed before choosing the agent must not vanish.
+  const draftKey = () => remoteSelection ? JSON.stringify(['remote', remoteSelection.agentId, remoteSelection.streamId]) : streamId ? JSON.stringify(['local', streamId, projectId ?? null]) : JSON.stringify(['new', projectId ?? null]);
   const storeDraft = () => { if (activeDraftKey) drafts.set(activeDraftKey, { text: input.value, mode: piMode.value }); };
   const syncDraft = () => {
     const key = draftKey(); if (key === activeDraftKey) { renderAttachments(); return; }

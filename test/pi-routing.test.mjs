@@ -65,3 +65,49 @@ test('one dashboard routes Hayate and live PI to distinct fixed owners without l
 test('PI routing cannot expose local control on network dashboard', async () => {
  await assert.rejects(createDashboard({ origin: 'https://dashboard.example', host: '0.0.0.0', tls: {}, upstream: 'https://hayate.example', piUpstream: 'http://127.0.0.1:3211' }), /loopback-only/);
 });
+
+test('a connector started before image history existed still shows images in the history (read from the saved session)', async () => {
+ const { mkdir, writeFile, realpath } = await import('node:fs/promises');
+ const directory = await mkdtemp(path.join(os.tmpdir(), 'pi-oldconn-'));
+ const sessions = await mkdtemp(path.join(os.tmpdir(), 'pi-oldconn-sessions-'));
+ const cwd = await realpath(directory);
+ const id = 'aaaaaaaa-1111-4222-8333-bbbbbbbbbbbb';
+ await mkdir(path.join(sessions, 'dir'), { recursive: true });
+ const image = Buffer.from('x'.repeat(300)).toString('base64');
+ const fileFor = sessionId => [{ type: 'session', version: 3, id: sessionId, cwd, timestamp: '2026-01-01T00:00:00Z' },
+  { type: 'message', id: 'with-image', parentId: null, timestamp: '2026-01-01T00:00:01Z', message: { role: 'user', content: [{ type: 'text', text: 'see' }, { type: 'image', mimeType: 'image/png', data: image }] } },
+  { type: 'model_change', id: 'switch', parentId: 'with-image', timestamp: '2026-01-01T00:00:01Z' },
+  { type: 'message', id: 'string-content', parentId: 'switch', timestamp: '2026-01-01T00:00:01Z', message: { role: 'user', content: 'plain string content' } },
+  { type: 'message', id: 'plain', parentId: 'string-content', timestamp: '2026-01-01T00:00:02Z', message: { role: 'assistant', content: [{ type: 'text', text: 'ok' }] } },
+  { type: 'message', id: 'many', parentId: 'plain', timestamp: '2026-01-01T00:00:03Z', message: { role: 'user', content: Array.from({ length: 5 }, () => ({ type: 'image', mimeType: 'image/png', data: image })) } }].map(line => JSON.stringify(line)).join('\n') + '\n';
+ const current = 'cccccccc-1111-4222-8333-bbbbbbbbbbbb';
+ await writeFile(path.join(sessions, 'dir', `2026_${id}.jsonl`), fileFor(id)); await writeFile(path.join(sessions, 'dir', `2026_${current}.jsonl`), fileFor(current));
+ const pi = await createPiService({ directory, roots: [directory], sessionRoots: [sessions] });
+ const origin = `http://127.0.0.1:${pi.server.address().port}`;
+ const connect = async (sessionId, features) => {
+  const peer = net.createConnection(pi.owners.socketPath); peer.setEncoding('utf8'); await once(peer, 'connect');
+  const registered = once(peer, 'data'); peer.write(JSON.stringify({ type: 'register', sessionId, cwd, name: 'T', features }) + '\n'); await registered; return peer;
+ };
+ const read = async (peer, sessionId) => {
+  const command = once(peer, 'data'); const page = fetch(`${origin}/api/pi/sessions/${sessionId}?view=remote`);
+  const request = JSON.parse((await command)[0]);
+  peer.write(JSON.stringify({ type: 'response', id: request.id, success: true, data: { messages: [{ id: 'with-image', role: 'user', text: 'see' }, { id: 'plain', role: 'assistant', text: 'ok' }, { id: 'many', role: 'user', text: '' }], before: null, busy: false } }) + '\n');
+  return (await page).json();
+ };
+ try {
+  const old = await connect(id, ['history-page-v1', 'image-prompt-v1']);
+  const oldPage = await read(old, id);
+  assert.deepEqual(oldPage.messages[0].images, [{ mimeType: 'image/png', bytes: 300 }], 'image listed although the old connector sent none');
+  assert.equal(oldPage.messages[1].images, undefined, 'a message without images stays without');
+  assert.equal(oldPage.messages[2].images.length, 4, 'at most four images are listed');
+  const fresh = await connect(current, ['history-page-v1', 'image-prompt-v1', 'history-images-v1']);
+  const freshPage = await read(fresh, current);
+  assert.equal(freshPage.messages[0].images, undefined, 'a connector that reports history-images-v1 is trusted: nothing is read from disk');
+  // Images the connector already lists are never replaced.
+  const command = once(old, 'data'); const page = fetch(`${origin}/api/pi/sessions/${id}?view=remote`);
+  const request = JSON.parse((await command)[0]);
+  old.write(JSON.stringify({ type: 'response', id: request.id, success: true, data: { messages: [{ id: 'with-image', role: 'user', text: 'see', images: [{ mimeType: 'image/jpeg', bytes: 7 }] }], before: null, busy: false } }) + '\n');
+  assert.deepEqual((await (await page).json()).messages[0].images, [{ mimeType: 'image/jpeg', bytes: 7 }]);
+  old.destroy(); fresh.destroy();
+ } finally { await pi.stop(); await rm(directory, { recursive: true, force: true }); await rm(sessions, { recursive: true, force: true }); }
+});

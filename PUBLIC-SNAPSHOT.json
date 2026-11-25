@@ -1,5 +1,5 @@
 {
-  "contentDigest": "66e2d97e7debeab26d6b6190bf9c58c0dbeeef891e56ba0017313113229c44e8",
+  "contentDigest": "7716fce62b5db61deecb4b5a6d718781512dc0664319df84b33c4eb5ea6e536a",
   "files": [
     {
       "mode": "100644",
@@ -39,7 +39,7 @@
     {
       "mode": "100644",
       "path": "PUBLIC-SOURCE.json",
-      "sha256": "528d10027cb291daf92d5cd4670fb5645466b83a9c46052e70e27b064abefcaa"
+      "sha256": "851a9a4c82465f33bf01904e6b157e42fafb15cdd24398fa57b6db3fc346e918"
     },
     {
       "mode": "100644",
@@ -374,7 +374,7 @@
     {
       "mode": "100644",
       "path": "dashboard/public/workspace-client.js",
-      "sha256": "c5ac534f5ea65681b3541c38c294f5aa94359fbd89b6555306d443e953237e39"
+      "sha256": "505754b30672380d2759309a4cf816c29c934aad070b3078fe161cd9198cda68"
     },
     {
       "mode": "100644",
@@ -459,7 +459,7 @@
     {
       "mode": "100644",
       "path": "package.json",
-      "sha256": "d11e6ff79da8e24b00eb1d5ca8056bd5ec7026a5bc1c56e9cce8b528fb34ee6c"
+      "sha256": "83723077d04005e745b1c548ec4d86df5041199a2c2d2ea10d779bc603d8d386"
     },
     {
       "mode": "100644",
@@ -494,12 +494,12 @@
     {
       "mode": "100644",
       "path": "pi-adapter/extension.mjs",
-      "sha256": "43b341f210ccd1ea996ed72b5ad0b07150a2fb3b11ba618d6d79a00b4cc01fee"
+      "sha256": "c7c8915a3948172b4fc1ed7cabc0ddf73a76f9b7367e8ad6b3af5a6a2430fd79"
     },
     {
       "mode": "100644",
       "path": "pi-adapter/history-page.mjs",
-      "sha256": "fd6edb876f26d96657847698792d58d1c0c498410977a5ad34626c97dbae2a84"
+      "sha256": "4d66df5b0a1e19af535ebcbbc915f3e0a17a35c910a80194012043e43451cdd3"
     },
     {
       "mode": "100644",
@@ -529,7 +529,7 @@
     {
       "mode": "100644",
       "path": "pi-adapter/owner-server.mjs",
-      "sha256": "f43e4b470b8900326c2621666abf72b04892457e61b3dd76dbaf7e3e34c4d1bd"
+      "sha256": "86b4e095351de6d90f2f1603b2dda0ea0daa0b0512af9cb6bb7e3a64877a7f6c"
     },
     {
       "mode": "100644",
@@ -544,7 +544,7 @@
     {
       "mode": "100644",
       "path": "pi-adapter/service.mjs",
-      "sha256": "21ea9680756b9c5a057aced1b2102db98f62a86cf3b9d87bb4d98577be92c3da"
+      "sha256": "b5cf9220ef61f78bd7607ca374780c55115970c1ac41e6af34810a503c4f66cf"
     },
     {
       "mode": "100644",
@@ -695,6 +695,11 @@
       "mode": "100644",
       "path": "test/discovery.test.mjs",
       "sha256": "7bcdaaf81cf466a485fc0383951f4ab73fd9601956ff3b117a185fc4a1653ff8"
+    },
+    {
+      "mode": "100644",
+      "path": "test/draft-follows-chat.browser.mjs",
+      "sha256": "bc98c2156c1533262bdefcd199f59692f302c3d5d25dd3ce4850133addb1dc54"
     },
     {
       "mode": "100644",
@@ -904,7 +909,7 @@
     {
       "mode": "100644",
       "path": "test/pi-routing.test.mjs",
-      "sha256": "73fc2d818106a0da7ea3ac7eef13363bc2ab15a1aa4f537ac5c11085cfd36887"
+      "sha256": "40ad5801b8e6870884ade004ac760704b68ef96ab6ed76099a7b8ea852126083"
     },
     {
       "mode": "100644",
@@ -1024,5 +1029,5 @@
   ],
   "historyPolicy": "fresh public snapshot; no private ancestry or source author metadata",
   "schema": 1,
-  "sourceSHA": "cfae4ae9147dc475785c516c554616591f02cd7c"
+  "sourceSHA": "1e3bd06544c2b769893ff5a95438e6b6f0ddb4f1"
 }
