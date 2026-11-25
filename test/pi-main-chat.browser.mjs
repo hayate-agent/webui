@@ -2,6 +2,7 @@ import { chromium } from 'playwright';
 import { createServer } from 'node:http';
 import assert from 'node:assert/strict';
 import { createDashboard } from '../server/server.mjs';
+const dirRequests = [];
 let submitted, created, forkRequest, archived = false, aborted = false;
 let added = false, renamed, rolled = false, releaseSend, delivered = false;
 const chats = Array.from({ length: 45 }, (_, index) => ({ id: `session-${index}`, title: `PI session ${index}`, projectId: null }));
@@ -21,6 +22,8 @@ const backend = createServer(async (req, res) => {
   if (capability === 'streams' && input.action === 'fork') { forkRequest = input; chats.push({ id: 'forked-session', title: 'Chosen PI session · Fork', projectId: null }); return out({ id: 'forked-session', title: 'Chosen PI session · Fork', projectId: null }); }
   if (capability === 'streams' && input.action === 'create') { created = input; return out({ id: 'session', projectId: null, title: input.title }); }
   if (input.action === 'pi' && input.route === '/api/pi/sessions') return out({ roots: ['/fixture/project'], sessions: [] });
+  if (input.action === 'pi' && input.route === '/api/pi/dirs') return out({ roots: ['/fixture'] });
+  if (input.action === 'pi' && input.route?.startsWith('/api/pi/dirs?path=')) { dirRequests.push(decodeURIComponent(input.route.split('=')[1])); const at = decodeURIComponent(input.route.split('=')[1]); return out(at === '/fixture' ? { directory: '/fixture', parent: null, entries: [{ name: 'other', path: '/fixture/other' }, { name: 'project', path: '/fixture/project' }] } : { directory: at, parent: '/fixture', entries: [] }); }
   if (input.action === 'pi-chats' && input.operation === 'list') return out({ sessions: [{ id: 'chosen', name: 'Chosen PI session', cwd: '/fixture/project', owner: 'tui', chatStatus: 'unselected' }] });
   if (input.action === 'pi-chats' && input.operation === 'preview') return out({ messages: [{ role: 'user', text: 'Investigate build warnings' }, { role: 'assistant', text: 'Found the compiler issue' }] });
   if (input.action === 'pi-chats' && input.operation === 'rename') { renamed = input.name; return out({ renamed: true }); }
@@ -212,9 +215,14 @@ await followupRow.getByText('Follow-up eingereiht · wartet auf PI', { exact: tr
  await page.getByRole('button', { name: '＋ New chat', exact: true }).click();
  await page.getByLabel('Active agent', { exact: true }).selectOption('pi-host');
  await page.getByLabel('Next project step').fill('Start a new PI conversation');
- page.once('dialog', dialog => dialog.accept('/fixture/project'));
+ let nativePrompt = false; page.on('dialog', dialog => { nativePrompt = true; void dialog.dismiss(); });
  const createResponse = page.waitForResponse(response => response.request().postData()?.includes('"action":"create"'));
- await page.getByRole('button', { name: 'Send ↑', exact: true }).click(); await createResponse;
+ await page.getByRole('button', { name: 'Send ↑', exact: true }).click();
+ const folders = page.getByRole('dialog', { name: 'Choose working directory' });
+ await folders.getByRole('button', { name: 'project/', exact: true }).click();
+ await folders.locator('.dir-picker-current', { hasText: '/fixture/project' }).waitFor();
+ await folders.getByRole('button', { name: 'Use this folder', exact: true }).click(); await createResponse;
+ assert.equal(nativePrompt, false); assert.deepEqual(dirRequests, ['/fixture', '/fixture/project']);
  assert.equal(created.cwd, '/fixture/project'); assert.ok(created.idempotencyKey);
  // Rename from the conversation's own menu: PI hosts rename through the native session name.
  renamed = undefined;

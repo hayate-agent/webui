@@ -111,3 +111,32 @@ test('a refused creation can be retried with the same key', async () => {
   assert.equal(retry.status, 201); assert.equal((await retry.json()).id, 'ok-1');
  } finally { await service.stop(); await rm(directory, { recursive: true, force: true }); }
 });
+
+test('folder listing shows only directories inside the configured roots', async () => {
+ const base = await mkdtemp(path.join(os.tmpdir(), 'pi-dirs-'));
+ const root = path.join(base, 'root'), outside = path.join(base, 'outside');
+ const { mkdir, symlink } = await import('node:fs/promises');
+ await mkdir(path.join(root, 'alpha', 'inner'), { recursive: true }); await mkdir(path.join(root, '.hidden')); await mkdir(outside);
+ await writeFile(path.join(root, 'file.txt'), 'x'); await symlink(outside, path.join(root, 'escape')); await symlink(path.join(root, 'alpha'), path.join(root, 'link-inside'));
+ const priv = await mkdtemp(path.join(os.tmpdir(), 'pi-dirs-bridge-'));
+ const service = await createPiService({ directory: priv, roots: [root], makeRpc: () => { throw Error('no worker'); } });
+ const origin = `http://127.0.0.1:${service.server.address().port}`;
+ const get = async query => { const r = await fetch(origin + '/api/pi/dirs' + query); return { status: r.status, body: await r.json() }; };
+ try {
+  const real = await (await import('node:fs/promises')).realpath(root);
+  assert.deepEqual((await get('')).body, { roots: [real] });
+  const top = (await get('?path=' + encodeURIComponent(root))).body;
+  assert.equal(top.directory, real); assert.equal(top.parent, null, 'the root has no parent in the picker');
+  assert.deepEqual(top.entries.map(e => e.name), ['alpha', 'link-inside'], 'no files, no hidden folders, no symlink out of the root');
+  const inner = (await get('?path=' + encodeURIComponent(path.join(root, 'alpha')))).body;
+  assert.equal(inner.parent, real); assert.deepEqual(inner.entries.map(e => e.name), ['inner']);
+  await mkdir(path.join(root, 'many')); for (let i = 0; i < 520; i++) await mkdir(path.join(root, 'many', 'd' + String(i).padStart(3, '0')));
+  assert.equal((await get('?path=' + encodeURIComponent(path.join(root, 'many')))).body.entries.length, 500, 'listing is bounded');
+  assert.equal((await get('?path=' + encodeURIComponent(outside))).status, 403);
+  assert.equal((await get('?path=' + encodeURIComponent(path.join(root, 'escape')))).status, 403, 'a symlink out of the root is refused');
+  assert.equal((await get('?path=' + encodeURIComponent(path.join(root, '..')))).status, 403);
+  assert.equal((await get('?path=' + encodeURIComponent(path.join(root, 'missing')))).status, 404);
+  const hostile = await fetch(origin + '/api/pi/dirs?path=' + encodeURIComponent(root), { headers: { origin: 'http://evil.test' } });
+  assert.equal(hostile.status, 403);
+ } finally { await service.stop(); await rm(base, { recursive: true, force: true }); await rm(priv, { recursive: true, force: true }); }
+});

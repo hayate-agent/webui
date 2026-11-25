@@ -1,7 +1,7 @@
 import { chromium } from 'playwright';
 import { createServer } from 'node:http';
 import { EventEmitter } from 'node:events';
-import { mkdtemp, rm } from 'node:fs/promises';
+import { mkdtemp, realpath, rm } from 'node:fs/promises';
 import path from 'node:path';
 import os from 'node:os';
 import assert from 'node:assert/strict';
@@ -46,8 +46,14 @@ try {
  await page.goto(origin);
  await page.getByRole('heading', { name: central ? 'PI · Test Mac' : 'Local PI', exact: true }).waitFor();
  await page.getByLabel('Active agent', { exact: true }).waitFor();
- page.once('dialog', dialog => dialog.accept(directory));
+ let nativePrompt = false; page.on('dialog', dialog => { nativePrompt = true; void dialog.dismiss(); });
  await page.getByRole('button', { name: '＋ New PI session', exact: true }).click();
+ const picker = page.getByRole('dialog', { name: 'Choose working directory' });
+ await picker.getByRole('button', { name: 'Use this folder', exact: true }).waitFor();
+ await page.waitForFunction(() => !document.querySelector('.dir-picker-use')?.disabled);
+ assert.equal(await picker.locator('.dir-picker-current').innerText(), await realpath(directory), 'a single root opens directly');
+ await picker.getByRole('button', { name: 'Use this folder', exact: true }).click();
+ assert.equal(nativePrompt, false, 'no browser prompt box is used');
  await page.getByText('Native PI history', { exact: true }).waitFor();
  const modal = page.locator('dialog[open]');
  await modal.locator('textarea').fill('From the browser');

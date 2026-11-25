@@ -1,5 +1,5 @@
 {
-  "contentDigest": "d8a39972da52225596c7624c57757cd9471d156dd668b804fc2399a54cb9c3f5",
+  "contentDigest": "66e2d97e7debeab26d6b6190bf9c58c0dbeeef891e56ba0017313113229c44e8",
   "files": [
     {
       "mode": "100644",
@@ -39,7 +39,7 @@
     {
       "mode": "100644",
       "path": "PUBLIC-SOURCE.json",
-      "sha256": "e40ec58ee1d9e31a8ba1a6dd70396022e62bd8094630a7152401e89e651db36c"
+      "sha256": "528d10027cb291daf92d5cd4670fb5645466b83a9c46052e70e27b064abefcaa"
     },
     {
       "mode": "100644",
@@ -148,6 +148,11 @@
     },
     {
       "mode": "100644",
+      "path": "dashboard/public/dir-picker.js",
+      "sha256": "dbe770b6c4e4d069352b42f13d486205f229813f0cfae55967d98c5f6ba328b8"
+    },
+    {
+      "mode": "100644",
       "path": "dashboard/public/history-viewport.js",
       "sha256": "250e26f63ea799f935e1bb2a57f8cb6d62264de18a9c3c864238c5ef5bc6982b"
     },
@@ -209,7 +214,7 @@
     {
       "mode": "100644",
       "path": "dashboard/public/pi-client.js",
-      "sha256": "cb28e26691aa75d53c2dc55c75b562ad045ab1839279c8da01aebdccd79ca574"
+      "sha256": "9d4d5fa6429b3ce78ab5fd0f0a14e292b11cdd44197461691a9a581c991d44e4"
     },
     {
       "mode": "100644",
@@ -369,12 +374,12 @@
     {
       "mode": "100644",
       "path": "dashboard/public/workspace-client.js",
-      "sha256": "a75dc23219d018737181b8066325b1244184f03a4e7074ddd8d113692d56561a"
+      "sha256": "c5ac534f5ea65681b3541c38c294f5aa94359fbd89b6555306d443e953237e39"
     },
     {
       "mode": "100644",
       "path": "dashboard/public/workspace-polish.css",
-      "sha256": "1f05ebcb87a39a8f9a38deb5924ff400ccb7a8c772f6bd6558972c493e0dce88"
+      "sha256": "86a22adb529896c9686bf38538c4aadabc8000e2211a78beac436ba65669d0aa"
     },
     {
       "mode": "100644",
@@ -529,7 +534,7 @@
     {
       "mode": "100644",
       "path": "pi-adapter/relay-client.mjs",
-      "sha256": "4e72125a5598874231246678ee4aab5a15dee2f84e927537d06a921a6233c7b1"
+      "sha256": "30c2afc96d7eefcd91ced15bb422a49cbdc22f27950864e071ee65d4f809c797"
     },
     {
       "mode": "100644",
@@ -539,7 +544,7 @@
     {
       "mode": "100644",
       "path": "pi-adapter/service.mjs",
-      "sha256": "f39b4e3583008677f2e197e765708c3ae0782993eb282eb4678d3268e06c89fb"
+      "sha256": "21ea9680756b9c5a057aced1b2102db98f62a86cf3b9d87bb4d98577be92c3da"
     },
     {
       "mode": "100644",
@@ -859,7 +864,7 @@
     {
       "mode": "100644",
       "path": "test/pi-main-chat.browser.mjs",
-      "sha256": "a521ed9c9fc8581b9b76e69b22a38afcf4067611bc358ad18260034ca5dcc2d7"
+      "sha256": "373f2c47b45245605b80dae8148145683a6b1a245f6a85fe288636ebaab3e29d"
     },
     {
       "mode": "100644",
@@ -894,7 +899,7 @@
     {
       "mode": "100644",
       "path": "test/pi-relay.test.mjs",
-      "sha256": "7b56ab3b2ea7068f18c9ee7a28966c2fe3bfd1bc21e9642db4b09abfb18d8f69"
+      "sha256": "71102f5ecc7a409f555b8d0a20d936ca7169cf2273217354184593029c5ee332"
     },
     {
       "mode": "100644",
@@ -914,7 +919,7 @@
     {
       "mode": "100644",
       "path": "test/pi-service.test.mjs",
-      "sha256": "241b07b9f890dd8b19d974603846652449bae3d095b10e8f4b8627c2df23713e"
+      "sha256": "939a18ec111552f80f04ccb54d0f315021352298ddddb5f9a11a946461562467"
     },
     {
       "mode": "100644",
@@ -929,7 +934,7 @@
     {
       "mode": "100644",
       "path": "test/pi.browser.mjs",
-      "sha256": "848b96e380609313c6382337f841c83814221c33bf614ac7297d1ac1bb8b1a24"
+      "sha256": "ba1e41d2060af8228fb90acae0037345c049ae63bb208322e94f8f1234e48353"
     },
     {
       "mode": "100644",
@@ -1019,5 +1024,5 @@
   ],
   "historyPolicy": "fresh public snapshot; no private ancestry or source author metadata",
   "schema": 1,
-  "sourceSHA": "a452df0964ea97dd14362175cf2e71daf097a062"
+  "sourceSHA": "cfae4ae9147dc475785c516c554616591f02cd7c"
 }

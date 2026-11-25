@@ -8,7 +8,7 @@ import path from 'node:path';
 import { randomBytes, randomUUID } from 'node:crypto';
 import { startRelayClient, enrollRelay } from '../pi-adapter/relay-client.mjs';
 test('authenticated relay scopes routes, never forwards cookies and rejects replay before second execution', async () => {
- let ws, calls = 0, forkEligible = true, listedSessions = [], delayEligibility = false;
+ let ws, calls = 0, dirLookups = 0, forkEligible = true, listedSessions = [], delayEligibility = false;
  class FakeWS extends EventEmitter {
   readyState = 1; bufferedAmount = 0;
   constructor() { super(); ws = this; }
@@ -16,7 +16,7 @@ test('authenticated relay scopes routes, never forwards cookies and rejects repl
   close() { this.readyState = 3; this.emit('close', 1008); }
   terminate() { this.readyState = 3; this.emit('close', 1000); }
  }
- const local = createServer(async (req, res) => { if (req.url === '/api/pi/events') { res.writeHead(200, { 'Content-Type': 'text/event-stream' }); res.write(': ready\n\n'); return; } if (req.method === 'GET' && req.url === '/api/pi/sessions') { res.end(JSON.stringify({ sessions: listedSessions })); return; } if (req.method === 'GET' && req.url.endsWith('/fork')) { if (delayEligibility) await new Promise(resolve => setTimeout(resolve, 30)); res.end(JSON.stringify({ eligible: forkEligible, reason: 'Reload original connector' })); return; } calls++; assert.equal(req.headers.cookie, undefined); assert.equal(req.headers['x-hayate-webui'], '1'); assert.equal(req.headers.origin, `http://127.0.0.1:${local.address().port}`); for await (const c of req) {} res.end('{"accepted":true,"id":"created-session"}'); });
+ const local = createServer(async (req, res) => { if (req.url === '/api/pi/events') { res.writeHead(200, { 'Content-Type': 'text/event-stream' }); res.write(': ready\n\n'); return; } if (req.method === 'GET' && req.url === '/api/pi/sessions') { res.end(JSON.stringify({ sessions: listedSessions })); return; } if (req.method === 'GET' && req.url.startsWith('/api/pi/dirs')) { dirLookups++; res.end(JSON.stringify({ roots: ['/work'] })); return; } if (req.method === 'GET' && req.url.endsWith('/fork')) { if (delayEligibility) await new Promise(resolve => setTimeout(resolve, 30)); res.end(JSON.stringify({ eligible: forkEligible, reason: 'Reload original connector' })); return; } calls++; assert.equal(req.headers.cookie, undefined); assert.equal(req.headers['x-hayate-webui'], '1'); assert.equal(req.headers.origin, `http://127.0.0.1:${local.address().port}`); for await (const c of req) {} res.end('{"accepted":true,"id":"created-session"}'); });
  await new Promise(resolve => local.listen(0, '127.0.0.1', resolve));
  const dir = await mkdtemp(path.join(os.tmpdir(), 'relay-test-')); const stateFile = path.join(dir, 'state.json');
  await writeFile(stateFile, JSON.stringify({ endpoint: 'https://relay.example', id: randomUUID(), token: randomBytes(32).toString('base64url'), capabilities: ['projects', 'streams', 'messages'], expiresAt: Date.now() + 60000 }));
@@ -26,6 +26,10 @@ test('authenticated relay scopes routes, never forwards cookies and rejects repl
   client = await startRelayClient({ endpoint: 'https://relay.example', stateFile, adapterOrigin: `http://127.0.0.1:${local.address().port}`, WebSocketClass: FakeWS });
   const frame = { type: 'request', id: randomUUID(), capability: 'messages', input: { action: 'pi', route: '/api/pi/sessions/existing/prompt', body: { text: 'hello' } } };
   const response = once(ws, 'response'); ws.emit('message', Buffer.from(JSON.stringify(frame)), false); assert.equal((await response)[0].ok, true); assert.equal(calls, 1);
+  const dirsFrame = (route, body) => ({ type: 'request', id: randomUUID(), capability: 'messages', input: { action: 'pi', route, ...(body ? { body } : {}) } });
+  for (const route of ['/api/pi/dirs', '/api/pi/dirs?path=%2Fwork%2Fa']) { const ok = once(ws, 'response'); ws.emit('message', Buffer.from(JSON.stringify(dirsFrame(route))), false); assert.equal((await ok)[0].ok, true, route); }
+  for (const [route, body] of [['/api/pi/dirs/x'], ['/api/pi/dirsx'], ['/api/pi/dirs?x=1'], ['/api/pi/dirs?path=a b'], ['/api/pi/dirs', { a: 1 }]]) { const no = once(ws, 'response'); ws.emit('message', Buffer.from(JSON.stringify(dirsFrame(route, body))), false); assert.equal((await no)[0].ok, false, route); }
+  assert.equal(dirLookups, 2, 'only the two allowed folder lookups reached the adapter'); assert.equal(calls, 1);
   const denied = once(ws, 'response'); ws.emit('message', Buffer.from(JSON.stringify({ ...frame, id: randomUUID(), input: { action: 'pi', route: '/api/auth/session' } })), false); assert.equal((await denied)[0].ok, false); assert.equal(calls, 1);
   const creation = { action: 'create', projectId: null, cwd: '/fixture', title: 'New', idempotencyKey: randomUUID() };
   const invoke = async input => { const answer = once(ws, 'response'); ws.emit('message', Buffer.from(JSON.stringify({ type: 'request', id: randomUUID(), capability: 'streams', input })), false); return (await answer)[0]; };
@@ -93,10 +97,10 @@ test('authenticated relay scopes routes, never forwards cookies and rejects repl
   assert.equal(toolList.ok, true); assert.deepEqual(toolList.result ?? toolList.data ?? toolList.value, { tools: [{ name: 'list_sessions', kind: 'read' }] });
   assert.equal((await message({ action: 'dashboard-tools', op: 'call', streamId: 'existing', tool: 'delete_everything', args: {} })).ok, false);
   assert.equal((await message({ action: 'dashboard-tools', op: 'list', streamId: '../x' })).ok, false, 'conversation id is validated');
+  const callsBefore = calls;
   const listed = await message({ action: 'dashboard-tools', op: 'call', streamId: 'existing', tool: 'list_sessions', args: {} });
   assert.equal(listed.ok, true);
   const body = JSON.stringify(listed); assert.ok(!body.includes('/fixture'), 'no working directory in the result'); assert.ok(!body.includes('secret-text'), 'no message text in the result');
-  const callsBefore = calls;
   assert.equal(calls, callsBefore, 'no dashboard tool request reaches the PI service');
  } finally { await client?.stop(); local.closeAllConnections(); await new Promise(resolve => local.close(resolve)); await rm(dir, { recursive: true, force: true }); }
 });

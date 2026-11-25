@@ -68,3 +68,7 @@ body .workspace-screen button:active,body .workspace-dialog button:active{transf
 @media(hover:hover) and (pointer:fine){body .workspace-stream-row>button:last-child{opacity:.5}body .workspace-stream-row:hover>button:last-child,body .workspace-stream-row:focus-within>button:last-child{opacity:1}}
 @media(max-width:760px){body:has(.workspace-screen:not([hidden])){grid-template-columns:1fr}body:has(.workspace-screen:not([hidden])) aside{padding:10px 16px;gap:8px}body .workspace-screen{padding:0 16px}body .workspace-screen h1{font-size:18px}body .workspace-screen>header{grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:10px;padding:14px 0}body .workspace-screen>header>h1{grid-column:1;max-width:100%}body .workspace-screen>header>button{grid-column:2;grid-row:1}body .workspace-screen .agent-picker{grid-row:2}body .workspace-screen select{max-width:100%;width:100%}body .workspace-content{padding-top:20px}body .workspace-composer{margin-bottom:12px}body .workspace-dialog{padding:18px}}
 @media(prefers-reduced-motion:reduce){body .workspace-screen button:active,body .workspace-dialog button:active{transform:none}}
+.dir-picker-current{font-family:ui-monospace,monospace;word-break:break-all}
+.dir-picker-list{display:flex;flex-direction:column;gap:4px;max-height:50vh;overflow:auto;margin-top:12px}
+.dir-picker-row{text-align:left;justify-content:flex-start}
+.dir-picker-row[hidden]{display:none}

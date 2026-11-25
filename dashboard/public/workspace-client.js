@@ -1,5 +1,6 @@
 import { openActionMenu } from './ui/menu.jsx';
 import { openWorkspaceDialog } from './ui/dialog.jsx';
+import { pickDirectory } from './dir-picker.js';
 import { createComposer } from './ui/composer.jsx';
 import { createMediaDrafts, uploadImageChunks } from './media-drafts.js';
 import { renderChatMessage, renderLiveThinking, renderLiveTool, tickElapsed } from './ui/message.jsx';
@@ -1167,8 +1168,7 @@ export async function mountWorkspace({ request, notice, markdown }) {
           const destination = projectId ?? (peerState?.projects?.length === 1 ? peerState.projects[0].id : null);
           if (!destination && !agent.features.includes('standalone-chats')) throw Error('Choose a shared project; this agent has not enabled standalone chats.');
           if (agent.features.includes('pi-live-v1') && !attempt.cwd) {
-            const info = await peerRequest(agentId, 'messages', { action: 'pi', route: '/api/pi/sessions' });
-            const cwd = window.prompt('PI working directory (inside allowed roots)', info.roots?.[0] ?? '');
+            const cwd = await pickDirectory(path => peerRequest(agentId, 'messages', { action: 'pi', route: path ? `/api/pi/dirs?path=${encodeURIComponent(path)}` : '/api/pi/dirs' }));
             if (!cwd) return;
             attempt.cwd = cwd;
             sessionStorage.setItem('workspace.pending', JSON.stringify([...attempts]));

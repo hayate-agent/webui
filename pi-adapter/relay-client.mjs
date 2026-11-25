@@ -230,7 +230,8 @@ export async function startRelayClient({ stateFile, endpoint, adapterOrigin, Web
   if (frame.capability === 'activity' && input.action === 'list') return { streams: [], features: ['pi-live-v1'] };
   if (frame.capability !== 'messages' || input.action !== 'pi') throw Error('Unsupported PI capability');
   const route = input.route;
-  if (typeof route !== 'string' || !/^\/api\/pi\/sessions(?:\/[A-Za-z0-9_-]+(?:\/(?:prompt|abort|dialog|release))?)?$/.test(route)) throw Error('PI route refused');
+  const dirs = typeof route === 'string' && /^\/api\/pi\/dirs(?:\?path=[^#\s]{1,1024})?$/.test(route) && input.body === undefined;
+  if (!dirs && (typeof route !== 'string' || !/^\/api\/pi\/sessions(?:\/[A-Za-z0-9_-]+(?:\/(?:prompt|abort|dialog|release))?)?$/.test(route))) throw Error('PI route refused');
   if (input.body !== undefined && (!input.body || typeof input.body !== 'object' || Array.isArray(input.body))) throw Error('PI JSON body required');
   const snapshot = input.body === undefined && /^\/api\/pi\/sessions\/[A-Za-z0-9_-]+$/.test(route);
   return request(route + (snapshot ? '?view=remote' : ''), input.body);
