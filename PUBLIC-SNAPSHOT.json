@@ -1,5 +1,5 @@
 {
-  "contentDigest": "50d7a7c9fa0003ab1f2610ef1a68bc04c9e1bf3120110bef61817c39f7692147",
+  "contentDigest": "d8a39972da52225596c7624c57757cd9471d156dd668b804fc2399a54cb9c3f5",
   "files": [
     {
       "mode": "100644",
@@ -39,7 +39,7 @@
     {
       "mode": "100644",
       "path": "PUBLIC-SOURCE.json",
-      "sha256": "9fc70fcfc2de5f0429e7e888eaf18c035d8805eeff05e0a33dc9a6a0fd8cd5dc"
+      "sha256": "e40ec58ee1d9e31a8ba1a6dd70396022e62bd8094630a7152401e89e651db36c"
     },
     {
       "mode": "100644",
@@ -64,7 +64,7 @@
     {
       "mode": "100644",
       "path": "dashboard/public/agent-discovery.js",
-      "sha256": "d0355d15c6ea4694342b2f1f9a5d66a98f1033a694e0f4fcb2fa4aae68fc6e12"
+      "sha256": "6659e16e39aa21b431f2547ffbb3c6d373e79c270fb112983fd5c2950d217f7a"
     },
     {
       "mode": "100644",
@@ -369,7 +369,7 @@
     {
       "mode": "100644",
       "path": "dashboard/public/workspace-client.js",
-      "sha256": "d267ae0c67ef2e6a1a27b956dd0167bb12fafc20062f2cdf5e90fa2d965d1a09"
+      "sha256": "a75dc23219d018737181b8066325b1244184f03a4e7074ddd8d113692d56561a"
     },
     {
       "mode": "100644",
@@ -529,7 +529,7 @@
     {
       "mode": "100644",
       "path": "pi-adapter/relay-client.mjs",
-      "sha256": "b0bba53ea3afb884b5224cdaf3116e62e1849b2e27b224a51f6438ba3e47b610"
+      "sha256": "4e72125a5598874231246678ee4aab5a15dee2f84e927537d06a921a6233c7b1"
     },
     {
       "mode": "100644",
@@ -539,7 +539,7 @@
     {
       "mode": "100644",
       "path": "pi-adapter/service.mjs",
-      "sha256": "b0445f18f387436b2f6082dde826f7c7c38d234598b6931afc289e8e803d9701"
+      "sha256": "f39b4e3583008677f2e197e765708c3ae0782993eb282eb4678d3268e06c89fb"
     },
     {
       "mode": "100644",
@@ -689,7 +689,7 @@
     {
       "mode": "100644",
       "path": "test/discovery.test.mjs",
-      "sha256": "382097e9dd06b6ceca4ce8c9ef5bce06e7e42030d3c68c8347c1e1464ffea694"
+      "sha256": "7bcdaaf81cf466a485fc0383951f4ab73fd9601956ff3b117a185fc4a1653ff8"
     },
     {
       "mode": "100644",
@@ -894,7 +894,7 @@
     {
       "mode": "100644",
       "path": "test/pi-relay.test.mjs",
-      "sha256": "99d2620eba8105e037558b9906f4d8686d8d18a824f4efa568a455cb8df7914f"
+      "sha256": "7b56ab3b2ea7068f18c9ee7a28966c2fe3bfd1bc21e9642db4b09abfb18d8f69"
     },
     {
       "mode": "100644",
@@ -914,7 +914,7 @@
     {
       "mode": "100644",
       "path": "test/pi-service.test.mjs",
-      "sha256": "2872af93ac636fcbee47529e2b04cf9759925df9570e247cd76205bc326ac1e7"
+      "sha256": "241b07b9f890dd8b19d974603846652449bae3d095b10e8f4b8627c2df23713e"
     },
     {
       "mode": "100644",
@@ -1019,5 +1019,5 @@
   ],
   "historyPolicy": "fresh public snapshot; no private ancestry or source author metadata",
   "schema": 1,
-  "sourceSHA": "6a52ac8cd8b8c430ae7e6fbd0100089cee082164"
+  "sourceSHA": "a452df0964ea97dd14362175cf2e71daf097a062"
 }

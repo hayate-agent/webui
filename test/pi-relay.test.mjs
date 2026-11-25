@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { EventEmitter, once } from 'node:events';
 import { createServer } from 'node:http';
-import { mkdtemp, writeFile, rm } from 'node:fs/promises';
+import { mkdtemp, writeFile, rm, mkdir } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { randomBytes, randomUUID } from 'node:crypto';
@@ -142,4 +142,37 @@ test('relay client forwards stream envelopes only after the relay negotiated str
   await wait(() => ws.sent.some(frame => frame.type === 'changed'));
   assert.equal(ws.sent.some(frame => frame.type === 'event'), false, 'a dropped delta is announced by invalidation, never lost silently');
  } finally { await client?.stop(); sse?.end(); local.close(); await rm(dir, { recursive: true, force: true }); }
+});
+
+test('an unfinished creation (ledger still pending) is retried with the same key instead of being refused forever', async () => {
+ let ws; const bodies = [];
+ class FakeWS extends EventEmitter {
+  readyState = 1; bufferedAmount = 0;
+  constructor() { super(); ws = this; }
+  send(text) { this.emit('response', JSON.parse(text)); }
+  close() { this.readyState = 3; this.emit('close', 1008); }
+  terminate() { this.readyState = 3; this.emit('close', 1000); }
+ }
+ const local = createServer(async (req, res) => {
+  if (req.url === '/api/pi/events') { res.writeHead(200, { 'Content-Type': 'text/event-stream' }); res.write(': ready\n\n'); return; }
+  let text = ''; for await (const chunk of req) text += chunk;
+  if (req.method === 'POST' && req.url === '/api/pi/sessions') { bodies.push(JSON.parse(text)); res.writeHead(201, { 'content-type': 'application/json' }); res.end(JSON.stringify({ id: 'created-session' })); return; }
+  res.writeHead(404); res.end('{}');
+ });
+ await new Promise(resolve => local.listen(0, '127.0.0.1', resolve));
+ const dir = await mkdtemp(path.join(os.tmpdir(), 'relay-pending-')); const stateFile = path.join(dir, 'state.json');
+ await writeFile(stateFile, JSON.stringify({ endpoint: 'https://relay.example', id: randomUUID(), token: randomBytes(32).toString('base64url'), capabilities: ['projects', 'streams', 'messages'], expiresAt: Date.now() + 60000 }));
+ const key = randomUUID();
+ const creation = { action: 'create', projectId: null, cwd: '/fixture', title: 'New', idempotencyKey: key };
+ await mkdir(stateFile + '.operations', { recursive: true });
+ await writeFile(path.join(stateFile + '.operations', key + '.json'), JSON.stringify({ fingerprint: JSON.stringify({ cwd: '/fixture', title: 'New' }), pending: true }));
+ const client = await startRelayClient({ endpoint: 'https://relay.example', stateFile, adapterOrigin: `http://127.0.0.1:${local.address().port}`, WebSocketClass: FakeWS });
+ const invoke = async input => { const answer = once(ws, 'response'); ws.emit('message', Buffer.from(JSON.stringify({ type: 'request', id: randomUUID(), capability: 'streams', input })), false); return (await answer)[0]; };
+ try {
+  assert.equal((await invoke({ ...creation, cwd: '/other' })).ok, false, 'a different request under the same key is still refused');
+  assert.equal(bodies.length, 0);
+  const result = await invoke(creation);
+  assert.equal(result.ok, true); assert.equal(result.result.id, 'created-session');
+  assert.deepEqual(bodies, [{ cwd: '/fixture', idempotencyKey: key }], 'the adapter gets the key so it can answer a retry with the same session');
+ } finally { await client.stop(); local.close(); await rm(dir, { recursive: true, force: true }); }
 });

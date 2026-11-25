@@ -154,11 +154,11 @@ export async function startRelayClient({ stateFile, endpoint, adapterOrigin, Web
     catch (error) {
       if (error.code !== 'EEXIST') throw error;
       const prior = JSON.parse(await readFile(operation, 'utf8'));
-      if (prior.fingerprint !== fingerprint || !prior.result) throw Error('Creation outcome unknown; reconcile sessions before retry');
-      await bindings.set(prior.result.id, 'active');
-      return prior.result;
+      if (prior.fingerprint !== fingerprint) throw Error('Creation outcome unknown; reconcile sessions before retry');
+      if (prior.result) { await bindings.set(prior.result.id, 'active'); return prior.result; }
+      // Unfinished earlier attempt: the adapter answers the same key with the same session (or starts one).
     }
-    const created = await request('/api/pi/sessions', { cwd: input.cwd });
+    const created = await request('/api/pi/sessions', { cwd: input.cwd, idempotencyKey: input.idempotencyKey });
     const result = { id: created.id, title: input.title ?? 'PI conversation', projectId: null };
     await writeFile(operation + '.tmp', JSON.stringify({ fingerprint, result }), { mode: 0o600 });
     await rename(operation + '.tmp', operation);

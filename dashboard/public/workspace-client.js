@@ -12,7 +12,7 @@ import { styleControl, styleAlert } from './ui/control-class.js';
 import { createAccountMenu } from './account-menu.js';
 // Optional frontend projection. No project/agent/secret domain state is stored here.
 import { createLiveTransport } from './live-transport.js';
-import { discoverAgent } from './agent-discovery.js';
+import { discoverAgent, mergeSnapshot } from './agent-discovery.js';
 import { createHistoryViewport } from './history-viewport.js';
 import { createRefreshHealth } from './refresh-health.js';
 import { createStreamState } from './stream-state.js';
@@ -460,7 +460,7 @@ export async function mountWorkspace({ request, notice, markdown }) {
         const id = browsingAgent, revision = navigationRevision;
         const snapshot = await peerRequest(id, 'streams', { action: 'list' });
         if (id !== browsingAgent || revision !== navigationRevision) return;
-        peerState = { ...peerState, ...snapshot }; agentSnapshots.set(id, peerState); renderTree();
+        peerState = mergeSnapshot(agentSnapshots.get(id) ?? peerState, snapshot); agentSnapshots.set(id, peerState); renderTree();
         if (remoteSelection) await showRemote(remoteSelection);
         refreshRecovered(target, refreshRevision);
       } catch { refreshFailed(target, refreshRevision); } finally { refreshFinished(); }
@@ -1206,7 +1206,7 @@ export async function mountWorkspace({ request, notice, markdown }) {
         if (projectId === submittedProject && navigationRevision === submittedNavigation) {
           if (input.value.trim() === text) input.value = '';
           const snapshot = await peerRequest(agentId, 'streams', { action: 'list' });
-          if (navigationRevision === submittedNavigation) { peerState = { ...peerState, ...snapshot }; agentSnapshots.set(agentId, peerState); await selectRemote(agentId, remoteId); }
+          if (navigationRevision === submittedNavigation) { peerState = mergeSnapshot(agentSnapshots.get(agentId) ?? peerState, snapshot); agentSnapshots.set(agentId, peerState); await selectRemote(agentId, remoteId); }
         }
       } finally { sessionStorage.setItem('workspace.pending', JSON.stringify([...attempts])); send.disabled = false; }
       return;
