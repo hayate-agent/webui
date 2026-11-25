@@ -40,6 +40,7 @@ export async function createPiService({ directory, roots, port = 0, executable =
   await catalog.refresh();
   const owners = await createOwnerServer(directory), workers = new Map(), streams = new Set();
   let pendingCreations = 0, stopping = false;
+  const creations = new Map();
   const liveTexts = new Map(), names = new Map(), liveThinking = new Map(), liveTools = new Map();
   // Extension point: `sinks` observe every stream envelope (auditing, forwarding).
   const log = createEventLog({ sinks });
@@ -192,7 +193,13 @@ export async function createPiService({ directory, roots, port = 0, executable =
         body = JSON.parse(text);
       }
       if (url.pathname === '/api/pi/sessions' && req.method === 'POST') {
-        if (children.size + pendingCreations >= 8) return json(409, { error: 'PI worker limit reached' });
+        // A retried creation (same idempotency key) returns the same worker instead of starting a second one.
+        const key = typeof body.idempotencyKey === 'string' && /^[0-9a-f-]{36}$/i.test(body.idempotencyKey) ? body.idempotencyKey : undefined;
+        const earlier = key ? creations.get(key) : undefined;
+        if (earlier) { try { const id = await earlier; if (workers.has(id)) return json(200, { id }); } catch { /* A failed attempt may be retried. */ } creations.delete(key); }
+        let settle, fail;
+        if (key) { const attempt = new Promise((resolve, reject) => { settle = resolve; fail = reject; }); attempt.catch(() => {}); creations.set(key, attempt); if (creations.size > 256) creations.delete(creations.keys().next().value); }
+        if (children.size + pendingCreations >= 8) { fail?.(Error('limit')); return json(409, { error: 'PI worker limit reached' }); }
         pendingCreations++;
         try {
         if (typeof body.cwd !== 'string') return json(400, { error: 'Choose a workspace' });
@@ -206,8 +213,8 @@ export async function createPiService({ directory, roots, port = 0, executable =
         workers.set(worker.id, worker);
         worker.on('event', event => { recordEvent({ sessionId: worker.id, event }); broadcast({ sessionId: worker.id, event }); });
         worker.once('exit', () => { workers.delete(worker.id); broadcast({ type: 'sessions', sessions: list() }); });
-        broadcast({ type: 'sessions', sessions: list() }); return json(201, { id: worker.id });
-        } finally { pendingCreations--; }
+        broadcast({ type: 'sessions', sessions: list() }); settle?.(worker.id); return json(201, { id: worker.id });
+        } finally { fail?.(Error('not created')); pendingCreations--; }
       }
       const match = /^\/api\/pi\/sessions\/([a-zA-Z0-9_-]{1,128})(?:\/(prompt|abort|snapshot|dialog|release|rename|fork|media|changes|image))?$/.exec(url.pathname);
       if (!match) return json(404, { error: 'Unknown PI route' });

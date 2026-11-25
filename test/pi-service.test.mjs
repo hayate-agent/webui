@@ -66,3 +66,48 @@ test('service refuses hostile origin and outside cwd; creates native worker thro
   assert.deepEqual((await (await fetch(origin + '/api/pi/sessions')).json()).sessions.map(session => session.id), ['fork-session']);
  } finally { await service.stop(); await rm(directory, { recursive: true, force: true }); }
 });
+
+test('a retried creation with the same key returns the same session, even while the first start is still running', async () => {
+ const directory = await mkdtemp(path.join(os.tmpdir(), 'pi-service-key-'));
+ let spawned = 0, release;
+ const gate = new Promise(resolve => { release = resolve; });
+ class Slow extends EventEmitter {
+  constructor() { super(); this.id = `session-${++spawned}`; this.cwd = directory; }
+  async ready() { await gate; return { sessionId: this.id }; }
+  async close() { this.emit('exit'); }
+ }
+ const service = await createPiService({ directory, roots: [directory], makeRpc: () => new Slow() });
+ const origin = `http://127.0.0.1:${service.server.address().port}`;
+ const post = body => fetch(origin + '/api/pi/sessions', { method: 'POST', headers: { origin, 'content-type': 'application/json', 'x-hayate-webui': '1' }, body: JSON.stringify(body) });
+ const key = '6f1c2d3e-4a5b-4c6d-8e7f-0a1b2c3d4e5f';
+ try {
+  const first = post({ cwd: directory, idempotencyKey: key });
+  await new Promise(resolve => setTimeout(resolve, 50));
+  const second = post({ cwd: directory, idempotencyKey: key });
+  await new Promise(resolve => setTimeout(resolve, 50));
+  assert.equal(spawned, 1, 'the retry must not start a second PI');
+  release();
+  const [a, b] = await Promise.all([first, second]);
+  assert.equal((await a.json()).id, 'session-1'); assert.equal((await b.json()).id, 'session-1');
+  assert.equal(spawned, 1);
+  const other = await post({ cwd: directory, idempotencyKey: '7f1c2d3e-4a5b-4c6d-8e7f-0a1b2c3d4e5f' });
+  assert.equal((await other.json()).id, 'session-2', 'another key is another session');
+  const plain = await post({ cwd: directory }); assert.equal(plain.status, 201);
+  assert.equal(spawned, 3, 'requests without a key always start a session');
+ } finally { release(); await service.stop(); await rm(directory, { recursive: true, force: true }); }
+});
+
+test('a refused creation can be retried with the same key', async () => {
+ const directory = await mkdtemp(path.join(os.tmpdir(), 'pi-service-retry-'));
+ let spawned = 0;
+ class Fake extends EventEmitter { constructor() { super(); this.id = `ok-${++spawned}`; this.cwd = directory; } async ready() { return { sessionId: this.id }; } async close() { this.emit('exit'); } }
+ const service = await createPiService({ directory, roots: [directory], makeRpc: () => new Fake() });
+ const origin = `http://127.0.0.1:${service.server.address().port}`;
+ const post = body => fetch(origin + '/api/pi/sessions', { method: 'POST', headers: { origin, 'content-type': 'application/json', 'x-hayate-webui': '1' }, body: JSON.stringify(body) });
+ const key = '8f1c2d3e-4a5b-4c6d-8e7f-0a1b2c3d4e5f';
+ try {
+  assert.equal((await post({ cwd: os.tmpdir(), idempotencyKey: key })).status, 403);
+  const retry = await post({ cwd: directory, idempotencyKey: key });
+  assert.equal(retry.status, 201); assert.equal((await retry.json()).id, 'ok-1');
+ } finally { await service.stop(); await rm(directory, { recursive: true, force: true }); }
+});
