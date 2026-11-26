@@ -3,7 +3,7 @@ import { createHash } from 'node:crypto';
 import http from 'node:http';
 import { createMediaStore, validatePromptImages } from './media.mjs';
 import { verifyDecodedImage } from './media-decode.mjs';
-import { readdir, realpath, stat } from 'node:fs/promises';
+import { readdir, realpath, rm, stat } from 'node:fs/promises';
 import path from 'node:path';
 import { homedir } from 'node:os';
 import { createOwnerServer } from './owner-server.mjs';
@@ -340,15 +340,35 @@ export async function createPiService({ directory, roots, port = 0, executable =
           if (typeof snapshot.sessionFile !== 'string') return json(409, { error: 'Reload the connector in the original PI terminal with native /reload, then retry Fork' });
           const cwd = await realpath(source.cwd);
           if (!allowed.some(root => cwd === root || !path.relative(root, cwd).startsWith('..') && !path.isAbsolute(path.relative(root, cwd)))) return json(403, { error: 'Workspace outside allowed roots' });
+          const entryId = body.entryId;
+          if (entryId !== undefined && (typeof entryId !== 'string' || !/^[A-Za-z0-9_-]{1,64}$/.test(entryId))) return json(400, { error: 'Invalid message to fork from' });
           const fork = makeRpc({ cwd, executable, forkFrom: snapshot.sessionFile });
           children.add(fork); fork.once('exit', () => children.delete(fork));
-          try { await fork.ready(); if (!fork.id || fork.id === id || workers.has(fork.id) || owners.list().some(owner => owner.id === fork.id)) throw Error('Native fork did not create an independent session'); }
-          catch (error) { await fork.close(); throw error; }
+          let selectedText, copy;
+          // PI makes a full copy of the source when the fork process starts. Choosing a message rewinds into a
+          // second file, so the full copy is discarded again - also when the choice is refused. Only the file this
+          // fork process created itself (a different path than the source, same folder) is ever removed.
+          const discardCopy = async keep => {
+            if (typeof copy === 'string' && copy !== keep && copy !== snapshot.sessionFile && copy.endsWith('.jsonl') && path.dirname(copy) === path.dirname(snapshot.sessionFile)) await rm(copy, { force: true }).catch(() => {});
+          };
+          try {
+            await fork.ready(); if (!fork.id || fork.id === id || workers.has(fork.id) || owners.list().some(owner => owner.id === fork.id)) throw Error('Native fork did not create an independent session');
+            if (entryId !== undefined) {
+              // PI's own `fork` rewinds the copy to just before the chosen message (the original file is never
+              // touched) and answers with that message's text.
+              copy = fork.sessionFile;
+              const rewound = await fork.command('fork', { entryId });
+              if (rewound?.cancelled) throw Error('The fork was cancelled by a PI extension');
+              selectedText = typeof rewound?.text === 'string' ? rewound.text.slice(0, 100000) : '';
+              await fork.ready();
+              await discardCopy(fork.sessionFile);
+            }
+          } catch (error) { await fork.close().catch(() => {}); await discardCopy(); throw error; }
           workers.set(fork.id, fork);
           fork.on('event', event => { recordEvent({ sessionId: fork.id, event }); broadcast({ sessionId: fork.id, event }); });
           fork.once('exit', () => { workers.delete(fork.id); broadcast({ type: 'sessions', sessions: list() }); });
           names.set(fork.id, `${source.name} · Fork`);
-          broadcast({ type: 'sessions', sessions: list() }); return json(201, { id: fork.id, title: `${source.name} · Fork` });
+          broadcast({ type: 'sessions', sessions: list() }); return json(201, { id: fork.id, title: `${source.name} · Fork`, ...(selectedText !== undefined ? { text: selectedText } : {}) });
         } finally { pendingCreations--; }
       }
       if (id.startsWith('disk_') && req.method !== 'GET') return json(409, { error: 'Read-only disk session: attach a live owner before writing' });

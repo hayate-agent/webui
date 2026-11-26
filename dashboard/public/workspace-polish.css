@@ -72,3 +72,15 @@ body .workspace-screen button:active,body .workspace-dialog button:active{transf
 .dir-picker-list{display:flex;flex-direction:column;gap:4px;max-height:50vh;overflow:auto;margin-top:12px}
 .dir-picker-row{text-align:left;justify-content:flex-start}
 .dir-picker-row[hidden]{display:none}
+.my-messages-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:.25rem;max-height:60vh;overflow:auto}
+.my-messages-item{display:flex;gap:.5rem;align-items:stretch}
+.my-messages-open{flex:1;min-width:0;display:flex;align-items:baseline;text-align:left;justify-content:flex-start;gap:.75rem;white-space:normal;height:auto;min-height:2.5rem;padding-block:.4rem}
+.my-messages-time{opacity:.65;font-size:.8em;flex:none}
+.my-messages-copy{flex:none}
+.my-messages-status{opacity:.7;margin:.25rem 0}
+.my-messages-earlier{margin:0 0 .5rem}
+.my-messages-earlier[hidden],.my-messages-button[hidden]{display:none}
+.history-jump-target{outline:2px solid var(--accent, currentColor);outline-offset:2px;border-radius:.5rem;transition:outline-color .4s}
+.my-messages-button{font-size:0}.my-messages-button::before{content:"☰";font-size:1rem}
+.my-messages-fork{flex:none}
+@media (max-width:640px){.my-messages-item{flex-wrap:wrap}.my-messages-open{flex-basis:100%}}

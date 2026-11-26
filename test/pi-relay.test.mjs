@@ -8,6 +8,7 @@ import path from 'node:path';
 import { randomBytes, randomUUID } from 'node:crypto';
 import { startRelayClient, enrollRelay } from '../pi-adapter/relay-client.mjs';
 test('authenticated relay scopes routes, never forwards cookies and rejects replay before second execution', async () => {
+ const forkBodies = [];
  let ws, calls = 0, dirLookups = 0, forkEligible = true, listedSessions = [], delayEligibility = false;
  class FakeWS extends EventEmitter {
   readyState = 1; bufferedAmount = 0;
@@ -16,7 +17,7 @@ test('authenticated relay scopes routes, never forwards cookies and rejects repl
   close() { this.readyState = 3; this.emit('close', 1008); }
   terminate() { this.readyState = 3; this.emit('close', 1000); }
  }
- const local = createServer(async (req, res) => { if (req.url === '/api/pi/events') { res.writeHead(200, { 'Content-Type': 'text/event-stream' }); res.write(': ready\n\n'); return; } if (req.method === 'GET' && req.url === '/api/pi/sessions') { res.end(JSON.stringify({ sessions: listedSessions })); return; } if (req.method === 'GET' && req.url.startsWith('/api/pi/dirs')) { dirLookups++; res.end(JSON.stringify({ roots: ['/work'] })); return; } if (req.method === 'GET' && req.url.endsWith('/fork')) { if (delayEligibility) await new Promise(resolve => setTimeout(resolve, 30)); res.end(JSON.stringify({ eligible: forkEligible, reason: 'Reload original connector' })); return; } calls++; assert.equal(req.headers.cookie, undefined); assert.equal(req.headers['x-hayate-webui'], '1'); assert.equal(req.headers.origin, `http://127.0.0.1:${local.address().port}`); for await (const c of req) {} res.end('{"accepted":true,"id":"created-session"}'); });
+ const local = createServer(async (req, res) => { if (req.url === '/api/pi/events') { res.writeHead(200, { 'Content-Type': 'text/event-stream' }); res.write(': ready\n\n'); return; } if (req.method === 'GET' && req.url === '/api/pi/sessions') { res.end(JSON.stringify({ sessions: listedSessions })); return; } if (req.method === 'GET' && req.url.startsWith('/api/pi/dirs')) { dirLookups++; res.end(JSON.stringify({ roots: ['/work'] })); return; } if (req.method === 'GET' && req.url.endsWith('/fork')) { if (delayEligibility) await new Promise(resolve => setTimeout(resolve, 30)); res.end(JSON.stringify({ eligible: forkEligible, reason: 'Reload original connector' })); return; } calls++; if (req.url.endsWith('/fork')) { let raw = ''; for await (const c of req) raw += c; forkBodies.push(raw); res.end('{"accepted":true,"id":"created-session"}'); return; } assert.equal(req.headers.cookie, undefined); assert.equal(req.headers['x-hayate-webui'], '1'); assert.equal(req.headers.origin, `http://127.0.0.1:${local.address().port}`); for await (const c of req) {} res.end('{"accepted":true,"id":"created-session"}'); });
  await new Promise(resolve => local.listen(0, '127.0.0.1', resolve));
  const dir = await mkdtemp(path.join(os.tmpdir(), 'relay-test-')); const stateFile = path.join(dir, 'state.json');
  await writeFile(stateFile, JSON.stringify({ endpoint: 'https://relay.example', id: randomUUID(), token: randomBytes(32).toString('base64url'), capabilities: ['projects', 'streams', 'messages'], expiresAt: Date.now() + 60000 }));
@@ -59,9 +60,18 @@ test('authenticated relay scopes routes, never forwards cookies and rejects repl
   assert.equal((await invoke(fork)).result.id, 'created-session'); assert.equal(calls, 4, 'same identity can retry after connector update');
   assert.equal((await invoke(fork)).result.id, 'created-session'); assert.equal(calls, 4, 'fork replay does not spawn twice');
   assert.equal((await invoke({ ...fork, streamId: 'different' })).ok, false); assert.equal(calls, 4);
+  // Fork from one message: the message id travels to the adapter, is part of the replay identity, and is validated.
+  const partial = { action: 'fork', streamId: 'existing', entryId: 'abc123', idempotencyKey: randomUUID() };
+  assert.equal((await invoke(partial)).result.id, 'created-session'); assert.equal(calls, 5);
+  assert.deepEqual(JSON.parse(forkBodies.at(-1)), { entryId: 'abc123' }, 'adapter receives the chosen message');
+  assert.equal((await invoke(partial)).result.id, 'created-session'); assert.equal(calls, 5, 'replay of a partial fork does not spawn twice');
+  assert.equal((await invoke({ ...partial, entryId: 'other' })).ok, false, 'same identity with another message is refused'); assert.equal(calls, 5);
+  assert.equal((await invoke({ ...partial, idempotencyKey: randomUUID(), entryId: '../etc/passwd' })).ok, false, 'malformed message id refused'); assert.equal(calls, 5);
+  assert.deepEqual(JSON.parse(forkBodies[0]), {}, 'a plain fork still sends no message id');
   await client.stop();
   client = await startRelayClient({ endpoint: 'https://relay.example', stateFile, adapterOrigin: `http://127.0.0.1:${local.address().port}`, WebSocketClass: FakeWS });
-  assert.equal((await invoke(fork)).result.id, 'created-session'); assert.equal(calls, 4, 'fork receipt survives relay restart');
+  assert.equal((await invoke(fork)).result.id, 'created-session'); assert.equal(calls, 5, 'fork receipt survives relay restart');
+  assert.equal((await invoke(partial)).result.id, 'created-session'); assert.equal(calls, 5, 'partial fork receipt survives relay restart too');
   listedSessions = [{ id: 'created-session', name: 'Long running chat', owner: 'tui', cwd: '/fixture' }];
   assert.equal((await invoke({ action: 'list' })).result.streams[0].title, 'Long running chat');
   // Dashboard tool list_sessions: only the selected chat, name + busy only (no cwd, no owner, no message text).

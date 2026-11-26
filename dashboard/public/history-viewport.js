@@ -133,6 +133,25 @@ export function createHistoryViewport({ render, scroller, onEarlier, windowSize 
       }
     },
     refresh: () => paint(true),
+    // Brings one loaded message to the top of the view and settles while rows are measured.
+    // Returns false when the message is not in the loaded window.
+    scrollToMessage(id) {
+      const index = messages.findIndex(message => message.id === id);
+      if (index < 0) return false;
+      userScrolled = false;
+      for (let i = 0; i < 6; i++) {
+        scroller.scrollTop = offset() + messages.slice(0, index).reduce((sum, message) => sum + height(message), 0);
+        paint(true);
+        const node = nodes.get(id)?.node;
+        if (!node) continue;
+        const drift = node.getBoundingClientRect().top - scroller.getBoundingClientRect().top;
+        if (Math.abs(drift) < 1) break;
+        scroller.scrollTop += drift;
+      }
+      const node = nodes.get(id)?.node;
+      if (node) { node.classList.add('history-jump-target'); setTimeout(() => node.classList.remove('history-jump-target'), 1600); }
+      return true;
+    },
     // Scrolls to the newest row and repeats until measured heights settle, so the
     // view never lands in the middle because unmeasured rows were estimated.
     scrollToEnd,

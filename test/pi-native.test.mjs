@@ -2,7 +2,7 @@ import { validPng } from './image-fixture.mjs';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
-import { mkdtemp, mkdir, rm, readFile, writeFile } from 'node:fs/promises';
+import { mkdtemp, mkdir, rm, readFile, readdir, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { createServer } from 'node:http';
@@ -96,6 +96,23 @@ test('installed PI supports native RPC state and entry snapshots', { skip: !proc
   assert.equal(await readFile(sourceFile, 'utf8'), sourceBefore);
   const sourceSnapshot = await (await fetch(`${origin}/api/pi/sessions/${source.id}`)).json();
   assert.ok(!sourceSnapshot.messages.some(message => message.text === 'HTTP fork-only continuation'));
+  // Fork from one earlier message: the copy stops just before it, the full copy PI makes first is removed, the original is untouched.
+  const sourcePage = await (await fetch(`${origin}/api/pi/sessions/${source.id}?view=remote`)).json();
+  const secondUser = sourcePage.messages.find(message => message.role === 'user' && message.text === 'Describe this isolated image');
+  assert.ok(secondUser, 'the second user message is in the page');
+  const filesBefore = (await readdir(path.dirname(sourceFile))).sort();
+  const sourceBytesBefore = await readFile(sourceFile, 'utf8');
+  const partial = await post(`/api/pi/sessions/${source.id}/fork`, { entryId: secondUser.id }); assert.equal(partial.status, 201);
+  const partialFork = await partial.json();
+  assert.equal(partialFork.text, 'Describe this isolated image', 'the chosen message text comes back for the composer');
+  const partialPage = await (await fetch(`${origin}/api/pi/sessions/${partialFork.id}?view=remote`)).json();
+  assert.deepEqual(partialPage.messages.map(message => message.text), ['HTTP source history', 'Persisted handoff answer'], 'the fork keeps everything before the chosen message and nothing after');
+  assert.equal(await readFile(sourceFile, 'utf8'), sourceBytesBefore, 'original session file unchanged');
+  const filesAfter = (await readdir(path.dirname(sourceFile))).sort();
+  assert.equal(filesAfter.length, filesBefore.length + 1, 'exactly one new session file (the discarded full copy is gone)');
+  assert.ok(filesAfter.some(file => file.includes(partialFork.id)), 'the new file belongs to the fork');
+  assert.equal((await post(`/api/pi/sessions/${source.id}/fork`, { entryId: 'does-not-exist' })).status >= 400, true, 'unknown message refused');
+  assert.equal((await readdir(path.dirname(sourceFile))).length, filesBefore.length + 1, 'a refused fork leaves no file behind');
  } finally {
   await adapter?.stop(); await reopenedFork?.close(); await fork?.close(); await resumed?.close(); await worker.close(); provider.closeAllConnections(); await new Promise(resolve => provider.close(resolve)); await rm(temp, { recursive: true, force: true });
  }

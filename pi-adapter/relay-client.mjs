@@ -122,9 +122,10 @@ export async function startRelayClient({ stateFile, endpoint, adapterOrigin, Web
   }
   if (frame.capability === 'streams' && input.action === 'fork') {
     if (!UUID.test(input.idempotencyKey) || !/^[A-Za-z0-9_-]+$/.test(input.streamId)) throw Error('Fork requires source and stable creation identity');
+    if (input.entryId !== undefined && !/^[A-Za-z0-9_-]{1,64}$/.test(input.entryId)) throw Error('Invalid message to fork from');
     const ledgerDir = stateFile + '.operations'; await mkdir(ledgerDir, { recursive: true, mode: 0o700 });
     const operation = path.join(ledgerDir, input.idempotencyKey + '.json');
-    const fingerprint = JSON.stringify({ action: 'fork', source: input.streamId });
+    const fingerprint = JSON.stringify({ action: 'fork', source: input.streamId, ...(input.entryId !== undefined ? { entryId: input.entryId } : {}) });
     // Definite read-only rejection must not poison the durable mutation receipt.
     try { await readFile(operation, 'utf8'); }
     catch (error) {
@@ -139,7 +140,7 @@ export async function startRelayClient({ stateFile, endpoint, adapterOrigin, Web
       if (prior.fingerprint !== fingerprint || !prior.result) throw Error('Fork outcome unknown; reconcile sessions before retry');
       await bindings.set(prior.result.id, 'active'); return prior.result;
     }
-    const created = await request(`/api/pi/sessions/${input.streamId}/fork`, {});
+    const created = await request(`/api/pi/sessions/${input.streamId}/fork`, input.entryId !== undefined ? { entryId: input.entryId } : {});
     const result = { ...created, projectId: null };
     await writeFile(operation + '.tmp', JSON.stringify({ fingerprint, result }), { mode: 0o600 }); await rename(operation + '.tmp', operation);
     await bindings.set(result.id, 'active'); return result;
@@ -171,7 +172,7 @@ export async function startRelayClient({ stateFile, endpoint, adapterOrigin, Web
     for (const session of result.sessions) knownChats.set(session.id, { id: session.id, projectId: null, title: session.name, readOnly: session.owner === 'disk', features: session.features ?? [], cwd: session.cwd });
     for (const id of knownChats.keys()) if (selected[id]?.status !== 'active') knownChats.delete(id);
     const connected = new Set(result.sessions.map(session => session.id));
-    return { streams: [...knownChats.values()].filter(session => selected[session.id]?.status === 'active').map(session => ({ ...session, unavailable: !connected.has(session.id) })), features: ['pi-live-v1', 'standalone-chats', 'idempotent-stream-create', 'pi-chat-bindings', 'chat-fork-v1', 'fork-eligibility-v1'] };
+    return { streams: [...knownChats.values()].filter(session => selected[session.id]?.status === 'active').map(session => ({ ...session, unavailable: !connected.has(session.id) })), features: ['pi-live-v1', 'standalone-chats', 'idempotent-stream-create', 'pi-chat-bindings', 'chat-fork-v1', 'fork-eligibility-v1', 'fork-from-message-v1'] };
   }
   if (frame.capability === 'messages' && input.action === 'pi-chats') {
     if (input.operation === 'list') { const result = await request('/api/pi/sessions'); const selected = await bindings.list(); return { sessions: result.sessions.map(session => ({ ...session, chatStatus: selected[session.id]?.status ?? 'unselected' })) }; }
