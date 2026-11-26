@@ -46,6 +46,22 @@ try {
  await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
  assert.ok(await page.locator('article').count() <= 32, 'resize and disclosure growth keep DOM bounded');
  assert.equal(await page.locator('article').first().evaluate(node => node.getBoundingClientRect().height), 240, 'resize measurement preserves existing row rather than replacing its DOM');
+ // Jump to a message far away: it lands at the top of the view, the DOM stays bounded, unknown ids are refused.
+ await page.setViewportSize({ width: 1000, height: 800 });
+ // The reader scrolled by hand a moment ago; a jump to the top must still not fetch earlier pages.
+ await page.locator('#scroll').evaluate(node => { node.scrollTop = 5000; node.dispatchEvent(new WheelEvent('wheel', { deltaY: -100 })); });
+ await page.evaluate(() => new Promise(requestAnimationFrame));
+ for (const id of ['7000', '0', '9999', '4321']) {
+  const jumped = await page.evaluate(id => window.viewport.scrollToMessage(id), id);
+  assert.equal(jumped, true);
+  await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+  const place = await page.locator('#scroll').evaluate((node, id) => { const row = node.querySelector(`[data-history-id="${id}"]`); return row ? row.getBoundingClientRect().top - node.getBoundingClientRect().top : null; }, id);
+  assert.notEqual(place, null, `message ${id} is rendered after the jump`);
+  assert.ok(place >= -2 && place < 400, `message ${id} is in view after the jump (top offset ${place})`);
+  assert.ok(await page.locator('article').count() <= 32, 'jump keeps the DOM bounded');
+ }
+ assert.equal(await page.evaluate(() => window.viewport.scrollToMessage('does-not-exist')), false);
+ assert.equal(await page.evaluate(() => window.earlierCalls), 1, 'jumping must not drain history');
  await page.evaluate(() => window.viewport.destroy());
  console.log('History viewport:10Kmessages, scrolling and100updates keep at most32message nodes.');
 } finally { await browser.close(); }

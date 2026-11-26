@@ -1,7 +1,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { EventEmitter } from 'node:events';
-import { mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { mkdtemp, mkdir, readdir, readFile, rm, writeFile } from 'node:fs/promises';
+import { writeFileSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { createPiService, projectEntries } from '../pi-adapter/service.mjs';
@@ -139,4 +140,90 @@ test('folder listing shows only directories inside the configured roots', async 
   const hostile = await fetch(origin + '/api/pi/dirs?path=' + encodeURIComponent(root), { headers: { origin: 'http://evil.test' } });
   assert.equal(hostile.status, 403);
  } finally { await service.stop(); await rm(base, { recursive: true, force: true }); await rm(priv, { recursive: true, force: true }); }
+});
+
+test('fork from a chosen message rewinds the copy, returns the text, removes the discarded full copy and never touches the original', async () => {
+ const directory = await mkdtemp(path.join(os.tmpdir(), 'pi-service-forkmsg-'));
+ const sessions = path.join(directory, 'sessions'); await mkdir(sessions);
+ const original = path.join(sessions, 'original.jsonl'); await writeFile(original, '{"type":"session"}\n');
+ let n = 0, rewind;
+ class Fake extends EventEmitter {
+  constructor(options) {
+   super(); this.cwd = directory; this.fresh = options.forkFrom !== undefined;
+   // PI writes a full copy next to the original as soon as it starts with --fork.
+   this.sessionFile = path.join(sessions, options.forkFrom ? `copy-${++n}.jsonl` : 'original.jsonl'); this.id = options.forkFrom ? `fork-${n}` : 'source';
+   if (options.forkFrom) writeFileSync(this.sessionFile, 'FULL COPY\n');
+  }
+  async ready() { return { sessionId: this.id, sessionFile: this.sessionFile }; }
+  async snapshot() { return { entries: [], leafId: null, busy: false, sessionFile: this.sessionFile }; }
+  async command(type, data) {
+   if (type === 'fork') {
+    rewind = data;
+    if (data.entryId === 'unknown') throw Error('PI rejected command');
+    if (data.entryId === 'cancelled') return { cancelled: true };
+    this.sessionFile = path.join(sessions, `rewound-${n}.jsonl`); this.id = `rewound-${n}`; writeFileSync(this.sessionFile, 'REWOUND\n');
+    return { text: 'the original question', cancelled: false };
+   }
+   return { sessionFile: this.sessionFile, isStreaming: false, pendingMessageCount: 0 };
+  }
+  async close() { this.emit('exit'); }
+ }
+ const service = await createPiService({ directory, roots: [directory], makeRpc: options => new Fake(options) });
+ const origin = `http://127.0.0.1:${service.server.address().port}`;
+ const post = (route, body) => fetch(origin + route, { method: 'POST', headers: { origin, 'content-type': 'application/json', 'x-hayate-webui': '1' }, body: JSON.stringify(body) });
+ try {
+  assert.equal((await post('/api/pi/sessions', { cwd: directory })).status, 201);
+  const files = async () => (await readdir(sessions)).sort();
+  assert.deepEqual(await files(), ['original.jsonl']);
+  const ok = await post('/api/pi/sessions/source/fork', { entryId: 'abc-123' });
+  assert.equal(ok.status, 201); const forked = await ok.json();
+  assert.equal(forked.text, 'the original question'); assert.equal(forked.id, 'rewound-1');
+  assert.deepEqual(rewind, { entryId: 'abc-123' });
+  assert.deepEqual(await files(), ['original.jsonl', 'rewound-1.jsonl'], 'the full copy is gone, the original stays');
+  assert.equal(await readFile(original, 'utf8'), '{"type":"session"}\n');
+  for (const [entryId, status] of [['unknown', 409], ['cancelled', 409], ['../../etc/passwd', 400], [42, 400]]) {
+   const refused = await post('/api/pi/sessions/source/fork', { entryId });
+   assert.equal(refused.status, status, `entryId ${JSON.stringify(entryId)}`);
+   assert.deepEqual(await files(), ['original.jsonl', 'rewound-1.jsonl'], `no file left behind after ${JSON.stringify(entryId)}`);
+  }
+  assert.equal((await readFile(original, 'utf8')), '{"type":"session"}\n');
+  const plain = await post('/api/pi/sessions/source/fork', {});
+  assert.equal(plain.status, 201); assert.equal((await plain.json()).text, undefined, 'a plain fork returns no text');
+  const after = await files();
+  assert.equal(after.filter(file => file.startsWith('copy-')).length, 1, `a plain fork keeps its copy (${after.join(', ')})`);
+ } finally { await service.stop(); await rm(directory, { recursive: true, force: true }); }
+});
+
+test('discarding the full copy never removes the original or a file outside the session folder', async () => {
+ const directory = await mkdtemp(path.join(os.tmpdir(), 'pi-service-forkguard-'));
+ const sessions = path.join(directory, 'sessions'), elsewhere = path.join(directory, 'elsewhere'); await mkdir(sessions); await mkdir(elsewhere);
+ const original = path.join(sessions, 'original.jsonl'); await writeFile(original, 'ORIGINAL\n');
+ const foreign = path.join(elsewhere, 'foreign.jsonl'); await writeFile(foreign, 'FOREIGN\n');
+ const notSession = path.join(sessions, 'notes.txt'); await writeFile(notSession, 'NOTES\n');
+ const inPlace = path.join(sessions, 'in-place.jsonl'); await writeFile(inPlace, 'IN PLACE\n');
+ let mode = 'same-as-source';
+ class Fake extends EventEmitter {
+  constructor(options) { super(); this.cwd = directory; this.id = options.forkFrom ? `fork-${mode}` : 'source'; this.sessionFile = options.forkFrom ? (mode === 'same-as-source' ? original : mode === 'foreign' ? foreign : mode === 'in-place' ? inPlace : notSession) : original; }
+  async ready() { return { sessionId: this.id, sessionFile: this.sessionFile }; }
+  async snapshot() { return { entries: [], leafId: null, busy: false, sessionFile: original }; }
+  async command(type) { if (type === 'fork') { if (mode !== 'in-place') this.sessionFile = path.join(sessions, 'rewound.jsonl'); this.id = 'rewound'; return { text: 't', cancelled: false }; } return { sessionFile: this.sessionFile, isStreaming: false, pendingMessageCount: 0 }; }
+  async close() { this.emit('exit'); }
+ }
+ const service = await createPiService({ directory, roots: [directory], makeRpc: options => new Fake(options) });
+ const origin = `http://127.0.0.1:${service.server.address().port}`;
+ const post = (route, body) => fetch(origin + route, { method: 'POST', headers: { origin, 'content-type': 'application/json', 'x-hayate-webui': '1' }, body: JSON.stringify(body) });
+ try {
+  assert.equal((await post('/api/pi/sessions', { cwd: directory })).status, 201);
+  for (const next of ['same-as-source', 'foreign', 'not-jsonl', 'in-place']) {
+   mode = next;
+   const response = await post('/api/pi/sessions/source/fork', { entryId: 'abc' });
+   assert.equal(response.status, 201, next);
+   // Remove the fork again so the next round can create one with the same ids.
+   await post(`/api/pi/sessions/${(await response.json()).id}/release`, {}).catch(() => {});
+   assert.equal(await readFile(original, 'utf8'), 'ORIGINAL\n', `${next}: original kept`);
+   assert.equal(await readFile(foreign, 'utf8'), 'FOREIGN\n', `${next}: file outside the folder kept`);
+   assert.equal(await readFile(notSession, 'utf8'), 'NOTES\n', `${next}: non-session file kept`);
+   assert.equal(await readFile(inPlace, 'utf8'), 'IN PLACE\n', `${next}: a file the fork still uses is kept`);
+  }
+ } finally { await service.stop(); await rm(directory, { recursive: true, force: true }); }
 });

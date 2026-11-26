@@ -1,5 +1,5 @@
 {
-  "contentDigest": "7716fce62b5db61deecb4b5a6d718781512dc0664319df84b33c4eb5ea6e536a",
+  "contentDigest": "99df4e37d769b0c6b4ff055d85d6b1a2c0fb52b4398943e84556fe9bdd7d0d22",
   "files": [
     {
       "mode": "100644",
@@ -39,7 +39,7 @@
     {
       "mode": "100644",
       "path": "PUBLIC-SOURCE.json",
-      "sha256": "851a9a4c82465f33bf01904e6b157e42fafb15cdd24398fa57b6db3fc346e918"
+      "sha256": "cee31d69ef7e8fec119d8540b471e42823fed37a64a4bb7986083c51103744e5"
     },
     {
       "mode": "100644",
@@ -154,7 +154,7 @@
     {
       "mode": "100644",
       "path": "dashboard/public/history-viewport.js",
-      "sha256": "250e26f63ea799f935e1bb2a57f8cb6d62264de18a9c3c864238c5ef5bc6982b"
+      "sha256": "28eb3e23e6b81fce864f806b5f0f65af6104fdb598e395e08246596c3192222b"
     },
     {
       "mode": "100644",
@@ -195,6 +195,11 @@
       "mode": "100644",
       "path": "dashboard/public/mobile.css",
       "sha256": "db890028c3051d11378a53fca0a3d1cbdd53db9ebcdf5f73ad2bb8cdce5a5c28"
+    },
+    {
+      "mode": "100644",
+      "path": "dashboard/public/my-messages.js",
+      "sha256": "c485ff602a73040b8d0427f829d0c7ead5f41e06ee4f28cef0d02805429a8ca8"
     },
     {
       "mode": "100644",
@@ -374,12 +379,12 @@
     {
       "mode": "100644",
       "path": "dashboard/public/workspace-client.js",
-      "sha256": "505754b30672380d2759309a4cf816c29c934aad070b3078fe161cd9198cda68"
+      "sha256": "42c97eae9c65c0e5674881e12cc50a81720efcb0637c1af718e96f90dd3d452d"
     },
     {
       "mode": "100644",
       "path": "dashboard/public/workspace-polish.css",
-      "sha256": "86a22adb529896c9686bf38538c4aadabc8000e2211a78beac436ba65669d0aa"
+      "sha256": "17203ef0fd6d0939cbb7e01d4a7ec0c8bfa6aef0e02c33350366f18a20a672e0"
     },
     {
       "mode": "100644",
@@ -459,7 +464,7 @@
     {
       "mode": "100644",
       "path": "package.json",
-      "sha256": "83723077d04005e745b1c548ec4d86df5041199a2c2d2ea10d779bc603d8d386"
+      "sha256": "b9e2c8af456aff689f3d60055d543709bdb4498adca6c11ba56b1eb397f135fb"
     },
     {
       "mode": "100644",
@@ -534,7 +539,7 @@
     {
       "mode": "100644",
       "path": "pi-adapter/relay-client.mjs",
-      "sha256": "30c2afc96d7eefcd91ced15bb422a49cbdc22f27950864e071ee65d4f809c797"
+      "sha256": "2e333ca06366162f53c23f07b02a90795781e5c4275b355911023f1433e5faf5"
     },
     {
       "mode": "100644",
@@ -544,7 +549,7 @@
     {
       "mode": "100644",
       "path": "pi-adapter/service.mjs",
-      "sha256": "b5cf9220ef61f78bd7607ca374780c55115970c1ac41e6af34810a503c4f66cf"
+      "sha256": "4a2025ef7217561090e9bed3022a805561fe0f1c29a4ed4c0f482dd65ae6b3dd"
     },
     {
       "mode": "100644",
@@ -724,7 +729,7 @@
     {
       "mode": "100644",
       "path": "test/history-viewport.browser.mjs",
-      "sha256": "ea02a0f86b77d6778fbfeacd9254504f38f6a707e22d4a721b612c9fc3d3e3a6"
+      "sha256": "00b16826201bb9a9fd41e4d7effa936e855d90e05f3b7d5679000f1657b93e1f"
     },
     {
       "mode": "100644",
@@ -790,6 +795,11 @@
       "mode": "100644",
       "path": "test/mobile-layout.browser.mjs",
       "sha256": "9933c497d00a70d6a45d6bd1c7b15a637ad189e1f8ea7cd0e072e31386adbaa0"
+    },
+    {
+      "mode": "100644",
+      "path": "test/my-messages.browser.mjs",
+      "sha256": "2489ca2a906dfa95c35bd738ca89fb5c9846a8417ce48ea6046b55701645ecb7"
     },
     {
       "mode": "100644",
@@ -889,7 +899,7 @@
     {
       "mode": "100644",
       "path": "test/pi-native.test.mjs",
-      "sha256": "7a356f84d65a7a51d86116331fdd2029b0820869ab76eec0a6464f60c10f5459"
+      "sha256": "79f4613268c767b7664fc3de045aebc66daf31ca27dc417d7258ea51ae58b0be"
     },
     {
       "mode": "100644",
@@ -904,7 +914,7 @@
     {
       "mode": "100644",
       "path": "test/pi-relay.test.mjs",
-      "sha256": "71102f5ecc7a409f555b8d0a20d936ca7169cf2273217354184593029c5ee332"
+      "sha256": "20de4f29717570176a43e493db949aabeab73e8bde0c4c1aef84fdcbdfb8af1c"
     },
     {
       "mode": "100644",
@@ -924,7 +934,7 @@
     {
       "mode": "100644",
       "path": "test/pi-service.test.mjs",
-      "sha256": "939a18ec111552f80f04ccb54d0f315021352298ddddb5f9a11a946461562467"
+      "sha256": "7974c678521ccd1e104637f69931f2ac67a3fee6bd0a2354c95e828f218cd713"
     },
     {
       "mode": "100644",
@@ -1029,5 +1039,5 @@
   ],
   "historyPolicy": "fresh public snapshot; no private ancestry or source author metadata",
   "schema": 1,
-  "sourceSHA": "1e3bd06544c2b769893ff5a95438e6b6f0ddb4f1"
+  "sourceSHA": "ad090112e372edbafa09ee6d19fb089639a405ac"
 }

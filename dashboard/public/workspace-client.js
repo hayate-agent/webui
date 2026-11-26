@@ -15,6 +15,7 @@ import { createAccountMenu } from './account-menu.js';
 import { createLiveTransport } from './live-transport.js';
 import { discoverAgent, mergeSnapshot } from './agent-discovery.js';
 import { createHistoryViewport } from './history-viewport.js';
+import { openMyMessages } from './my-messages.js';
 import { createRefreshHealth } from './refresh-health.js';
 import { createStreamState } from './stream-state.js';
 import { createCommandChannel } from './command-channel.js';
@@ -87,7 +88,9 @@ export async function mountWorkspace({ request, notice, markdown }) {
   const projectPicker = node('select'); projectPicker.setAttribute('aria-label', 'Chat project'); projectLabel.append(projectPicker);
   const chatContext = node('p', '', 'workspace-context'); chatContext.hidden = true;
   const headingIdentity = node('div', undefined, 'chat-heading-identity'); const meterSlot = node('div', undefined, 'chat-heading-meter'); headingIdentity.append(headingText, chatContext, meterSlot);
-  const headingControls = node('div', undefined, 'chat-heading-controls'); headingControls.append(agentLabel, projectLabel, menu);
+  const myMessages = button('My messages', run(() => showMyMessages())); myMessages.classList.add('my-messages-button'); myMessages.hidden = true;
+  myMessages.setAttribute('aria-label', 'My messages: jump to a message I sent'); myMessages.title = 'My messages';
+  const headingControls = node('div', undefined, 'chat-heading-controls'); headingControls.append(agentLabel, projectLabel, myMessages, menu);
   const accountMenu = createAccountMenu(message => notice(message)); if (accountMenu) headingControls.append(accountMenu);
   heading.append(headingIdentity, headingControls);
   projectPicker.onchange = run(() => selectProject(projectPicker.value || undefined));
@@ -367,7 +370,7 @@ export async function mountWorkspace({ request, notice, markdown }) {
     if (management) { agentLabel.hidden = true; projectLabel.hidden = true; chatContext.hidden = true; return; }
     send.disabled = sending || remoteSelection?.stale === true || capabilities['local-agent'] === false && !browsingAgent && !remoteSelection;
     const existing = Boolean(streamId || remoteSelection);
-    agentLabel.hidden = existing; projectLabel.hidden = existing; chatContext.hidden = !existing;
+    agentLabel.hidden = existing; projectLabel.hidden = existing; chatContext.hidden = !existing; myMessages.hidden = !existing;
     const agentId = remoteSelection?.agentId ?? browsingAgent;
     agentPicker.value = agentId ?? 'local';
     const source = agentId ? agentSnapshots.get(agentId) : state;
@@ -601,6 +604,7 @@ export async function mountWorkspace({ request, notice, markdown }) {
         } catch (error) { notice(error.message); }
         finally { selection.loadingEarlier = false; }
       };
+      selection.loadEarlier = loadEarlier;
       const earlier = conversation.before ? button('Load earlier messages', loadEarlier) : null;
       selection.earlier = earlier;
       if (!selection.viewport) selection.viewport = createHistoryViewport({ render: renderMessage, scroller: body, onEarlier: loadEarlier });
@@ -796,7 +800,39 @@ export async function mountWorkspace({ request, notice, markdown }) {
     items.push(['Hide project from sidebar', () => setAgentHidden(hideKey('project', undefined, project.id), true)]);
     popup(event, items);
   }
+  // Quick access to the operator's own messages in the open chat (bounded: older pages load on demand).
+  function showMyMessages() {
+    const selection = remoteSelection, local = !selection && localHistory ? state.streams.find(stream => stream.id === localHistory.id) : undefined;
+    const viewport = selection ? selection.viewport : localHistory?.viewport;
+    if (!viewport) return;
+    const messages = () => (selection ? selection.history : local?.messages) ?? [];
+    openMyMessages({
+      getMessages: messages,
+      hasEarlier: () => Boolean(selection?.before),
+      loadEarlier: async () => { if (selection?.loadEarlier) await selection.loadEarlier(); },
+      jump: id => {
+        if (!viewport.scrollToMessage(id)) notice('That message is not loaded any more. Use "Load earlier messages" or jump to the latest ones.');
+      },
+      copy: async message => { await navigator.clipboard.writeText(message.text ?? ''); },
+      // Fork from here: a new, independent chat that ends just before this message. The message text
+      // is put in its composer so it can be changed before sending. The original chat stays as it is.
+      fork: selection && (agentSnapshots.get(selection.agentId)?.features ?? []).includes('fork-from-message-v1') ? message => forkFromMessage(selection, message) : undefined,
+    });
+  }
   const forkAttempts = new Map();
+  async function forkFromMessage(selection, message) {
+    const agentId = selection.agentId;
+    const eligibility = await peerRequest(agentId, 'streams', { action: 'fork-eligibility', streamId: selection.streamId });
+    if (!eligibility.eligible) throw Error(eligibility.reason || 'This session cannot be forked yet.');
+    const key = `${agentId}:${selection.streamId}:${message.id}`;
+    const idempotencyKey = forkAttempts.get(key) ?? crypto.randomUUID();
+    forkAttempts.set(key, idempotencyKey);
+    const fork = await peerRequest(agentId, 'streams', { action: 'fork', streamId: selection.streamId, entryId: message.id, idempotencyKey });
+    forkAttempts.delete(key);
+    // Put the message text into the new chat's own draft before it opens.
+    drafts.set(JSON.stringify(['remote', agentId, fork.id]), { text: typeof fork.text === 'string' ? fork.text : message.text ?? '', mode: 'steer' });
+    await showAgentStreams(agentId); await selectRemote(agentId, fork.id);
+  }
   async function forkChat(stream, agentId) {
     const features = agentSnapshots.get(agentId)?.features ?? agentRoster.find(agent => agent.id === agentId)?.features ?? [];
     if (agentId && features.includes('fork-eligibility-v1')) {
