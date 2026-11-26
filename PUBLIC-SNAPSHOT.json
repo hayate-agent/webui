@@ -1,5 +1,5 @@
 {
-  "contentDigest": "99df4e37d769b0c6b4ff055d85d6b1a2c0fb52b4398943e84556fe9bdd7d0d22",
+  "contentDigest": "61a1d4c7b35f09f81033bc777c8961c9a3e8d47f8a4355bf7856b45fa1a2ba87",
   "files": [
     {
       "mode": "100644",
@@ -39,7 +39,7 @@
     {
       "mode": "100644",
       "path": "PUBLIC-SOURCE.json",
-      "sha256": "cee31d69ef7e8fec119d8540b471e42823fed37a64a4bb7986083c51103744e5"
+      "sha256": "fec60f9459ed69a5573c3d47b4474ec168e339bec04c040ba78c5d39d1d7287f"
     },
     {
       "mode": "100644",
@@ -379,7 +379,7 @@
     {
       "mode": "100644",
       "path": "dashboard/public/workspace-client.js",
-      "sha256": "42c97eae9c65c0e5674881e12cc50a81720efcb0637c1af718e96f90dd3d452d"
+      "sha256": "77712d5fcd5955b2223dcd6b6719e4a45ef3d1daeed0246ac076057351c1e781"
     },
     {
       "mode": "100644",
@@ -799,7 +799,7 @@
     {
       "mode": "100644",
       "path": "test/my-messages.browser.mjs",
-      "sha256": "2489ca2a906dfa95c35bd738ca89fb5c9846a8417ce48ea6046b55701645ecb7"
+      "sha256": "fecd8eccd5bd07f03c0b36b96fd0d0c6ba948d30dea81772a2adb4b5083131cd"
     },
     {
       "mode": "100644",
@@ -1039,5 +1039,5 @@
   ],
   "historyPolicy": "fresh public snapshot; no private ancestry or source author metadata",
   "schema": 1,
-  "sourceSHA": "ad090112e372edbafa09ee6d19fb089639a405ac"
+  "sourceSHA": "40c375eba7e78c1277963ef2738d3702c504262f"
 }

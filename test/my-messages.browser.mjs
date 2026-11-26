@@ -5,7 +5,7 @@ import { createDashboard } from '../server/server.mjs';
 
 // "My messages": a list of the messages the operator sent in the open chat; click jumps there,
 // copy puts the text on the clipboard, older pages load on demand (the DOM stays bounded).
-const total = 300, reads = [], forks = []; let eligible = true, failForks = 1;
+const total = 300, reads = [], forks = [], hayate = []; let eligible = true, failForks = 1;
 const mk = i => ({ id: `m${i}`, role: i % 10 === 0 ? 'user' : i % 10 === 5 ? 'toolResult' : 'assistant', toolName: 'bash', text: i % 10 === 0 ? `Question number ${i}` : `Answer ${i} `.repeat(6), timestamp: new Date(Date.UTC(2026, 10, 1, 8, 0, i)).toISOString() });
 const pageOf = before => { const end = before ? Number(before.slice(1)) : total; const start = Math.max(0, end - 100); return { id: 'old', title: 'Existing PI conversation', busy: false, messages: Array.from({ length: end - start }, (_, k) => mk(start + k)), before: start > 0 ? `m${start}` : null }; };
 const backend = createServer(async (req, res) => {
@@ -16,7 +16,19 @@ const backend = createServer(async (req, res) => {
  if (req.url === '/api/preferences') return out({ theme: 'green', mode: 'system', hidden: [], name: '' });
  if (req.url === '/api/workspace/capabilities') return out({ workspaces: 1, 'agent-hub': 1, 'local-agent': false, 'project-creation': false });
  if (req.url === '/api/workspace/state') return out({ agent: 'Central', projects: [], streams: [], settings: {} });
- if (req.url === '/api/workspace/agents') return out({ agents: [{ id: 'pi-host', name: 'My PI host', capabilities: ['projects', 'streams', 'messages', 'activity'] }] });
+ if (req.url === '/api/workspace/agents') return out({ agents: [{ id: 'pi-host', name: 'My PI host', capabilities: ['projects', 'streams', 'messages', 'activity'] }, { id: 'hayate', name: 'Hayate agent', capabilities: ['projects', 'streams', 'messages', 'activity'] }] });
+ if (req.url === '/api/workspace/agents/hayate/request') {
+  // A Hayate agent: forks from its own store, has no eligibility check (feature fork-from-message-v1 only).
+  let raw = ''; for await (const chunk of req) raw += chunk;
+  const { capability, input } = JSON.parse(raw); hayate.push({ capability, ...input });
+  const features = ['fork-streams', 'fork-from-message-v1'];
+  if (capability === 'projects') return out({ projects: [], features });
+  if (capability === 'activity') return out({ streams: [] });
+  if (capability === 'streams' && input.action === 'fork') return out({ id: 'h-fork', title: 'Hayate chat (fork)', projectId: null, messages: [], text: 'Question number 30 (from the Hayate agent)' });
+  if (capability === 'streams') return out({ streams: [{ id: 'h', title: 'Hayate chat', projectId: null }, ...(hayate.some(call => call.action === 'fork') ? [{ id: 'h-fork', title: 'Hayate chat (fork)', projectId: null }] : [])], features });
+  if (input.action === 'read') return out(input.streamId === 'h' ? { id: 'h', title: 'Hayate chat', busy: false, messages: Array.from({ length: 40 }, (_, i) => mk(i)), before: null } : { id: 'h-fork', title: 'Hayate chat (fork)', busy: false, messages: Array.from({ length: 30 }, (_, i) => mk(i)), before: null });
+  return out({});
+ }
  if (req.url === '/api/workspace/agents/pi-host/request') {
   let raw = ''; for await (const chunk of req) raw += chunk;
   const { capability, input } = JSON.parse(raw);
@@ -98,6 +110,17 @@ try {
  await page.getByRole('button', { name: 'Existing PI conversation', exact: true }).click();
  await page.getByRole('heading', { name: 'Existing PI conversation', exact: true }).waitFor();
  assert.equal(await page.getByLabel('Next project step').inputValue(), '', 'the original chat composer is untouched');
+ // A Hayate agent has no eligibility check: the fork works without one and still carries the message id.
+ await page.getByRole('button', { name: 'Hayate chat', exact: true }).click();
+ await page.getByRole('heading', { name: 'Hayate chat', exact: true }).waitFor();
+ await page.getByText('Question number 0', { exact: true }).waitFor();
+ await button.click(); await dialog.waitFor();
+ await dialog.locator('.my-messages-item', { has: page.locator('[data-message-id="m30"]') }).locator('.my-messages-fork').click();
+ await page.getByRole('heading', { name: 'Hayate chat (fork)' }).waitFor();
+ const hayateFork = hayate.filter(call => call.action === 'fork');
+ assert.equal(hayateFork.length, 1); assert.equal(hayateFork[0].entryId, 'm30'); assert.equal(hayateFork[0].streamId, 'h');
+ assert.equal(hayate.some(call => call.action === 'fork-eligibility'), false, 'no eligibility request to an agent that does not have one');
+ assert.equal(await page.getByLabel('Next project step').inputValue(), 'Question number 30 (from the Hayate agent)');
  // Not shown in the new-chat view.
  await page.getByRole('button', { name: '＋ New chat', exact: true }).click();
  assert.equal(await button.isVisible(), false, 'no shortcut in a new chat');

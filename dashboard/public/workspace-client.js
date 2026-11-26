@@ -822,8 +822,11 @@ export async function mountWorkspace({ request, notice, markdown }) {
   const forkAttempts = new Map();
   async function forkFromMessage(selection, message) {
     const agentId = selection.agentId;
-    const eligibility = await peerRequest(agentId, 'streams', { action: 'fork-eligibility', streamId: selection.streamId });
-    if (!eligibility.eligible) throw Error(eligibility.reason || 'This session cannot be forked yet.');
+    // Only the PI gateway checks eligibility (a terminal session may be busy); Hayate agents fork from their own store.
+    if ((agentSnapshots.get(agentId)?.features ?? []).includes('fork-eligibility-v1')) {
+      const eligibility = await peerRequest(agentId, 'streams', { action: 'fork-eligibility', streamId: selection.streamId });
+      if (!eligibility.eligible) throw Error(eligibility.reason || 'This session cannot be forked yet.');
+    }
     const key = `${agentId}:${selection.streamId}:${message.id}`;
     const idempotencyKey = forkAttempts.get(key) ?? crypto.randomUUID();
     forkAttempts.set(key, idempotencyKey);
