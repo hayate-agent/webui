@@ -1080,10 +1080,19 @@ export async function mountWorkspace({ request, notice, markdown }) {
         headingText.textContent = 'Outbound invitation';
         const section = node('section', undefined, 'agent-management');
         const code = node('input'); code.type = 'password'; code.readOnly = true; code.value = invite.code; code.autocomplete = 'off'; code.setAttribute('aria-label', 'Outbound invitation code');
-        section.append(node('h2', 'Connect the target agent'), node('p', invite.endpoint), node('p', `Single use · expires ${new Date(invite.expiresAt).toLocaleTimeString()}`), code,
+        const until = `Single use · expires ${new Date(invite.expiresAt).toLocaleTimeString()}`;
+        // One paste does it all: the prompt already holds the dashboard URL, the code and the setup steps.
+        if (typeof invite.prompt === 'string' && invite.prompt) {
+          const prompt = node('textarea', undefined, 'enroll-prompt'); prompt.readOnly = true; prompt.value = invite.prompt; prompt.rows = 8; prompt.spellcheck = false;
+          prompt.setAttribute('aria-label', 'Prompt for the target agent');
+          const copied = node('span', '', 'enroll-copied'); copied.setAttribute('role', 'status');
+          section.append(node('h2', 'Paste this into the target agent'), node('p', `It contains the dashboard address and the single-use code; nothing has to be typed. ${until}`), prompt,
+            button('Copy prompt', async () => { await navigator.clipboard.writeText(invite.prompt); copied.textContent = 'Copied'; }), copied,
+            node('h2', 'Code only'), node('p', invite.endpoint), code);
+        } else section.append(node('h2', 'Connect the target agent'), node('p', invite.endpoint), node('p', until), code);
+        section.append(
           button('Show code', event => { code.type = code.type === 'password' ? 'text' : 'password'; event.target.textContent = code.type === 'text' ? 'Hide code' : 'Show code'; }),
           button('Copy code', () => navigator.clipboard.writeText(code.value)),
-          node('p', 'On the target, open Agents → Connect this agent outbound, or use /agent-link-outbound enroll <HTTPS endpoint> <invitation code> as administrator. The outbound plugin must be enabled first.'),
           button('Back to incoming connections', agentsDialog));
         body.replaceChildren(section);
       };
