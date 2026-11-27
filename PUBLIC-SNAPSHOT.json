@@ -1,5 +1,5 @@
 {
-  "contentDigest": "61a1d4c7b35f09f81033bc777c8961c9a3e8d47f8a4355bf7856b45fa1a2ba87",
+  "contentDigest": "095b5b022241311d2970a59fb06fc18e567d1d5bf9b52cdb4613a3b0afc6f59c",
   "files": [
     {
       "mode": "100644",
@@ -39,7 +39,7 @@
     {
       "mode": "100644",
       "path": "PUBLIC-SOURCE.json",
-      "sha256": "fec60f9459ed69a5573c3d47b4474ec168e339bec04c040ba78c5d39d1d7287f"
+      "sha256": "1f650a690c2feea5b817a7ce1038290d65e5434638770a535d92a90494c0fb9d"
     },
     {
       "mode": "100644",
@@ -379,7 +379,7 @@
     {
       "mode": "100644",
       "path": "dashboard/public/workspace-client.js",
-      "sha256": "77712d5fcd5955b2223dcd6b6719e4a45ef3d1daeed0246ac076057351c1e781"
+      "sha256": "f52b7b5035b9131d76f0c1c177059fb6204ad6f78fbafa725e22f37270daf576"
     },
     {
       "mode": "100644",
@@ -464,7 +464,7 @@
     {
       "mode": "100644",
       "path": "package.json",
-      "sha256": "b9e2c8af456aff689f3d60055d543709bdb4498adca6c11ba56b1eb397f135fb"
+      "sha256": "907a6ad5063f0a951e70f776627ff1dec8a8e8bb06ba5c97fad5117ecbff96b3"
     },
     {
       "mode": "100644",
@@ -710,6 +710,11 @@
       "mode": "100644",
       "path": "test/elapsed.browser.mjs",
       "sha256": "3e50e766cb92b3982151cbd6a78eedbde90a88cf12105ce5df54404baa314d40"
+    },
+    {
+      "mode": "100644",
+      "path": "test/enroll-prompt.browser.mjs",
+      "sha256": "d26d7507570c5634825440f870a81eeb93fd46ed60db48b699ac17d1af891672"
     },
     {
       "mode": "100644",
@@ -1039,5 +1044,5 @@
   ],
   "historyPolicy": "fresh public snapshot; no private ancestry or source author metadata",
   "schema": 1,
-  "sourceSHA": "40c375eba7e78c1277963ef2738d3702c504262f"
+  "sourceSHA": "6dc0ac1fb9225b8c1f385d1a9a38ea7d43a20add"
 }
